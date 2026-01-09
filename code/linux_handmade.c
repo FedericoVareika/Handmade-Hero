@@ -1,11 +1,15 @@
 #include <stdint.h>
-#include <stdio.h>
 
 #include <sys/mman.h>
+
+#include <fcntl.h>
+#include <sys/stat.h>
+#include <unistd.h>
 
 #include <SDL2/SDL.h>
 
 #include <math.h>
+#include <stdint.h>
 
 #include "handmade.c"
 #include "handmade.h"
@@ -16,10 +20,77 @@
 #define GET_AXIS(handle, axis)                                                 \
     SDL_GameControllerGetAxis(handle, SDL_CONTROLLER_AXIS_##axis)
 
-// TODO(fede): Remove global variables
-global bool running = true;
-global u32 x_offset = 0;
-global u32 y_offset = 0;
+#if HANDMADE_INTERNAL
+
+internal DebugReadFileResult debug_platform_read_entire_file(char *filename) {
+    DebugReadFileResult result = {};
+
+    int fd = open(filename, O_RDONLY);
+    if (fd == -1) {
+        // handle error
+        return (DebugReadFileResult){};
+    }
+
+    struct stat stat_;
+    if (stat(filename, &stat_) == -1) {
+        // handle error
+        close(fd);
+        return (DebugReadFileResult){};
+    }
+
+    assert(sizeof(stat_.st_size) == sizeof(u64));
+    result.size = stat_.st_size;
+
+    result.memory = mmap(0, result.size, PROT_READ | PROT_WRITE,
+                         MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
+    u64 bytes_read = read(fd, result.memory, result.size);
+    if (bytes_read != result.size) {
+        // handle error
+        close(fd);
+        return (DebugReadFileResult){};
+    }
+
+    close(fd);
+
+    return result;
+}
+
+internal void debug_platform_free_file_memory(DebugReadFileResult read_result) {
+    if (read_result.memory) {
+        munmap(read_result.memory, read_result.size);
+    }
+}
+
+internal bool debug_platform_write_entire_file(char *filename, u64 size,
+                                               void *memory) {
+    /*
+     * NOTE(fede): When O_CREAT flag is set, a *mode* flag must be set as well.
+     *
+     *    In this case:
+     *
+     *         S_IRWXU -- 00700 user (file owner) has read, write, and
+     *                    execute permission
+     *
+     */
+
+    int fd = open(filename, O_RDWR | O_CREAT, S_IRWXU);
+    if (fd == -1) {
+        // handle error
+        return false;
+    }
+
+    int bytes_written = write(fd, memory, size);
+    if (bytes_written != size) {
+        // handle error
+        return false;
+    }
+
+    close(fd);
+
+    return true;
+}
+
+#endif
 
 // TODO(fede): Fill this up
 typedef struct {
@@ -52,6 +123,9 @@ internal void linux_resize_backbuffer(SDLBackbuffer *buffer, i32 width,
     if (!buffer->data) {
         buffer->data = mmap(0, new_size, PROT_READ | PROT_WRITE,
                             MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
+        if (!buffer->data) {
+            // TODO(fede): allocation failed
+        }
         buffer->data_capacity = new_size;
     }
 
@@ -100,8 +174,11 @@ internal void sdl_init_audio(SDLSoundOutput *sound_output,
     ring_buffer->play_cursor = 0;
     ring_buffer->write_cursor = 0;
     ring_buffer->size = buffer_size;
-    ring_buffer->data =
-        malloc(ring_buffer->size); // TODO(fede): Change allocation!!
+    ring_buffer->data = mmap(0, ring_buffer->size, PROT_READ | PROT_WRITE,
+                             MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
+    if (!ring_buffer->data) {
+        // TODO(fede): allocation failed
+    }
 
     SDL_AudioSpec desired_audio_spec = {};
     desired_audio_spec.freq = sound_output->samples_per_second;
@@ -147,6 +224,12 @@ internal void sdl_fill_sound_buffer(SDLAudioRingBuffer *ring_buffer,
         *sample_out++ = *sample_in++;
         sound_output->running_sample_index++;
     }
+}
+
+internal void sdl_handle_button(GameButton *old_state, bool is_down,
+                                GameButton *new_state) {
+    new_state->ended_down = is_down;
+    new_state->half_transition_count = old_state->ended_down != is_down ? 1 : 0;
 }
 
 internal bool handle_event(SDL_Event *event, SDLBackbuffer *backbuffer) {
@@ -224,18 +307,59 @@ int main(void) {
 
     SDLAudioRingBuffer ring_buffer = {};
     sdl_init_audio(&sound_output, &ring_buffer);
-    // sdl_fill_sound_buffer(&ring_buffer, &sound_output, 0,
-    //                       sound_output.latency_sample_count *
-    //                           sound_output.bytes_per_sample);
+
+    GameSoundOutputBuffer game_sound_buffer = {};
+    game_sound_buffer.samples =
+        mmap(0, ring_buffer.size, PROT_READ | PROT_WRITE,
+             MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
 
     SDL_PauseAudio(0);
+
+#if HANDMADE_INTERNAL
+    void *base_address = (void *)terabytes((u64)2);
+#else
+    void *base_address = 0;
+#endif
+
+    GameMemory game_memory = {};
+    game_memory.permanent_storage_size = megabytes(64);
+    game_memory.transient_storage_size = gigabytes((u64)4);
+    {
+        u64 total_storage_size = game_memory.permanent_storage_size +
+                                 game_memory.transient_storage_size;
+        void *total_storage =
+            mmap(base_address, total_storage_size, PROT_READ | PROT_WRITE,
+                 MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
+
+        game_memory.permanent_storage = total_storage;
+        game_memory.transient_storage =
+            (u8 *)total_storage + game_memory.permanent_storage_size;
+    }
+
+    if (!game_sound_buffer.samples || !game_memory.permanent_storage ||
+        !game_memory.transient_storage) {
+        // TODO(fede): allocation failed
+        return 0;
+    }
+
+    GameInput old_input = {};
+    GameInput new_input = {};
 
     while (!linux_handle_events(&backbuffer)) {
         // NOTE(fede): controller input
         // TODO(fede): make this platform independent
         {
-            for (int controller_index = 0; controller_index < MAX_CONTROLLERS;
-                 controller_index++) {
+            int max_controller_count =
+                min(MAX_CONTROLLERS, array_count(new_input.inputs));
+            for (int controller_index = 0;
+                 controller_index < max_controller_count; controller_index++) {
+                GameControllerInput *old_controller_state =
+                    &old_input.inputs[controller_index];
+                GameControllerInput *new_controller_state =
+                    &new_input.inputs[controller_index];
+
+                new_controller_state->is_analog = true;
+
                 SDL_GameController *controller_handle =
                     controller_handles[controller_index];
                 if (controller_handle == 0 ||
@@ -243,20 +367,60 @@ int main(void) {
                     continue;
 
                 // TODO(fede): see if this is better with an X macro
-                bool a_is_down = GET_BUTTON(controller_handle, A);
-                bool b_is_down = GET_BUTTON(controller_handle, B);
-                bool x_is_down = GET_BUTTON(controller_handle, X);
-                bool y_is_down = GET_BUTTON(controller_handle, Y);
+                sdl_handle_button(&old_controller_state->button_a,
+                                  GET_BUTTON(controller_handle, A),
+                                  &new_controller_state->button_a);
+                sdl_handle_button(&old_controller_state->button_b,
+                                  GET_BUTTON(controller_handle, B),
+                                  &new_controller_state->button_b);
+                sdl_handle_button(&old_controller_state->button_x,
+                                  GET_BUTTON(controller_handle, X),
+                                  &new_controller_state->button_x);
+                sdl_handle_button(&old_controller_state->button_y,
+                                  GET_BUTTON(controller_handle, Y),
+                                  &new_controller_state->button_y);
+                sdl_handle_button(&old_controller_state->button_y,
+                                  GET_BUTTON(controller_handle, Y),
+                                  &new_controller_state->button_y);
+                sdl_handle_button(&old_controller_state->left_shoulder,
+                                  GET_BUTTON(controller_handle, LEFTSHOULDER),
+                                  &new_controller_state->left_shoulder);
+                sdl_handle_button(&old_controller_state->right_shoulder,
+                                  GET_BUTTON(controller_handle, RIGHTSHOULDER),
+                                  &new_controller_state->right_shoulder);
 
                 i16 left_stick_y = GET_AXIS(controller_handle, LEFTY);
                 i16 left_stick_x = GET_AXIS(controller_handle, LEFTX);
 
-                y_offset += (i32)left_stick_y / 2000;
-                x_offset += (i32)left_stick_x / 2000;
+                // TODO(fede): deadzone
+                {
+                    f32 x;
+                    f32 y;
+                    if (left_stick_x < 0)
+                        x = (f32)left_stick_x / (f32)-INT16_MIN;
+                    else
+                        x = (f32)left_stick_x / (f32)INT16_MAX;
 
-                if (abs(left_stick_y) > 100) {
-                    sound_output.tone_hz =
-                        512 + (int)(256.0f * ((f32)left_stick_y / 40000.0f));
+                    if (left_stick_y < 0)
+                        y = (f32)left_stick_y / (f32)-INT16_MIN;
+                    else
+                        y = (f32)left_stick_y / (f32)INT16_MAX;
+
+                    new_controller_state->start_x = old_controller_state->end_x;
+                    new_controller_state->start_y = old_controller_state->end_y;
+
+                    new_controller_state->min_x =
+                        min(new_controller_state->start_x, x);
+                    new_controller_state->min_y =
+                        min(new_controller_state->start_y, y);
+
+                    new_controller_state->max_x =
+                        max(new_controller_state->start_x, x);
+                    new_controller_state->max_y =
+                        max(new_controller_state->start_y, y);
+
+                    new_controller_state->end_x = x;
+                    new_controller_state->end_y = y;
                 }
             }
         }
@@ -283,25 +447,20 @@ int main(void) {
 
         SDL_UnlockAudio();
 
-        GameSoundOutputBuffer game_audio_buffer = {};
-        game_audio_buffer.samples_per_second = sound_output.samples_per_second;
-        game_audio_buffer.sample_count =
+        game_sound_buffer.samples_per_second = sound_output.samples_per_second;
+        game_sound_buffer.sample_count =
             bytes_to_write / sound_output.bytes_per_sample;
-        game_audio_buffer.samples =
-            malloc(bytes_to_write); // TODO(fede): change allocation!!
 
         GameDisplayBuffer game_buffer = {};
         game_buffer.data = backbuffer.data;
         game_buffer.height = backbuffer.height;
         game_buffer.width = backbuffer.width;
 
-        game_update_and_render(&game_buffer, x_offset, y_offset,
-                               &game_audio_buffer, sound_output.tone_hz);
+        game_update_and_render(&game_memory, &game_buffer, &game_sound_buffer,
+                               &new_input);
 
-        sdl_fill_sound_buffer(&ring_buffer, &sound_output, &game_audio_buffer,
+        sdl_fill_sound_buffer(&ring_buffer, &sound_output, &game_sound_buffer,
                               byte_to_lock, bytes_to_write);
-
-        free(game_audio_buffer.samples);
 
         {
             SDL_RenderClear(renderer);
@@ -315,6 +474,13 @@ int main(void) {
 
             SDL_RenderPresent(renderer);
         }
+
+        // TODO(fede): This is probably copying the entire struct 3 times,
+        //             check if these should be pointers instead (like casey
+        //             did)
+        GameInput aux_input = old_input;
+        old_input = new_input;
+        new_input = aux_input;
     }
 
     SDL_CloseAudio();

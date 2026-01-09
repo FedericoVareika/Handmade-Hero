@@ -32,9 +32,47 @@ internal void render_buffer(GameDisplayBuffer *buffer, i32 x_offset,
     }
 }
 
-void game_update_and_render(GameDisplayBuffer *display_buffer, i32 x_offset,
-                            i32 y_offset, GameSoundOutputBuffer *audio_buffer,
-                            int tone_hz) {
-    fill_audio_buffer(audio_buffer, tone_hz);
-    render_buffer(display_buffer, x_offset, y_offset);
+internal void game_update_and_render(GameMemory *memory,
+                                     GameDisplayBuffer *display_buffer,
+                                     GameSoundOutputBuffer *audio_buffer,
+                                     GameInput *input) {
+    assert(sizeof(GameState) <= memory->permanent_storage_size);
+    GameState *game_state = (GameState *)memory->permanent_storage;
+
+    if (!memory->is_initialized) {
+        DebugReadFileResult file_result =
+            debug_platform_read_entire_file(__FILE__);
+        if (file_result.memory) {
+            if (!debug_platform_write_entire_file("test.txt", file_result.size,
+                                                  file_result.memory)) {
+                // handle error
+                printf("Error writing to test.txt\n");
+            }
+            debug_platform_free_file_memory(file_result);
+        }
+
+        game_state->x_offset = 0;
+        game_state->y_offset = 0;
+        game_state->tone_hz = 256;
+
+        memory->is_initialized = true;
+    }
+
+    GameControllerInput controller = input->inputs[0];
+
+    if (controller.is_analog) {
+        game_state->x_offset += (int)(controller.end_x * 4.0f);
+        game_state->y_offset += (int)(controller.end_y * 4.0f);
+
+        game_state->tone_hz = 256 + (int)(controller.end_y * 128.0f);
+    } else {
+        // TODO(fede): Digital input
+    }
+
+    if (controller.button_a.ended_down) {
+        game_state->x_offset += 10;
+    }
+
+    fill_audio_buffer(audio_buffer, game_state->tone_hz);
+    render_buffer(display_buffer, game_state->x_offset, game_state->y_offset);
 }
