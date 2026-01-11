@@ -1,13 +1,13 @@
 #pragma once
 
-/* 
- * NOTE(fede): 
+/*
+ * NOTE(fede):
  *
  *  HANDMADE_SLOW:
- *    0 - No slow code allowed.  
- *    1 - Slow code allowed.  
+ *    0 - No slow code allowed.
+ *    1 - Slow code allowed.
  *
- *  HANDMADE_INTERNAL: 
+ *  HANDMADE_INTERNAL:
  *    0 - Build for public use.
  *    1 - Build for developer only.
  *
@@ -15,14 +15,31 @@
 
 #define internal static
 #define global static
+#define local_persist static
 
 #define PI 3.14159265359
 
 #if HANDMADE_SLOW
-#define assert(expression) \
-    if (!(expression)) { *(int *)0 = 0; }
-#else 
-#define assert(expression) 
+
+/*
+ * NOTE(fede): HANDMADE_ASSERT is for code that we only want to include for
+ *             asserts.
+ *             For example the _end in the button union, that is useless for
+ *             game code, only to assert that the size of the button array is
+ *             equal to the size of the button struct.
+ * */
+#define HANDMADE_ASSERT 1
+
+#define assert(expression)                                                     \
+    if (!(expression)) {                                                       \
+        *(int *)0 = 0;                                                         \
+    }
+
+#else
+
+#define HANDMADE_ASSERT 0
+#define assert(expression)
+
 #endif
 
 #define kilobytes(value) ((value)*1024)
@@ -30,8 +47,9 @@
 #define gigabytes(value) (megabytes(value) * 1024)
 #define terabytes(value) (gigabytes(value) * 1024)
 
-#define max(a, b) (a) > (b) ? (a) : (b)
-#define min(a, b) (a) < (b) ? (a) : (b)
+#define max(a, b) ((a) > (b) ? (a) : (b))
+#define min(a, b) ((a) < (b) ? (a) : (b))
+#define abs(a) ((a) < 0 ? -(a) : (a))
 
 #define array_count(a) (sizeof((a)) / sizeof((a)[0]))
 
@@ -55,7 +73,7 @@ typedef enum { false, true } bool;
  * game layer.
  * */
 
-#if HANDMADE_INTERNAL 
+#if HANDMADE_INTERNAL
 
 typedef struct {
     u64 size;
@@ -64,7 +82,8 @@ typedef struct {
 
 internal DebugReadFileResult debug_platform_read_entire_file(char *filename);
 internal void debug_platform_free_file_memory(DebugReadFileResult file_result);
-internal bool debug_platform_write_entire_file(char *filename, u64 size, void *memory);
+internal bool debug_platform_write_entire_file(char *filename, u64 size,
+                                               void *memory);
 
 #endif
 
@@ -98,38 +117,48 @@ typedef struct {
 } GameButton;
 
 typedef struct {
+    bool is_connected;
     bool is_analog;
+    f32 avg_stick_x;
+    f32 avg_stick_y;
 
+    // TODO(fede): make an assert that checks the length of buttons coincides
+    //             with the amount of named buttons.
     union {
-        GameButton buttons[6];
+        GameButton buttons[10];
         struct {
+            GameButton move_up;
+            GameButton move_down;
+            GameButton move_left;
+            GameButton move_right;
+
             GameButton button_a;
             GameButton button_b;
             GameButton button_x;
             GameButton button_y;
+
             GameButton left_shoulder;
             GameButton right_shoulder;
+
+// NOTE(fede): This is the example of HANDMADE_ASSERT that was listed above.
+#if HANDMADE_ASSERT
+            GameButton _end;
+#endif
         };
     };
-
-    f32 start_x;
-    f32 start_y;
-
-    f32 end_x;
-    f32 end_y;
-
-    f32 max_x;
-    f32 max_y;
-
-    f32 min_x;
-    f32 min_y;
 } GameControllerInput;
 
-#define GAME_MAX_INPUTS 4
+#define HANDMADE_MAX_INPUTS 1 + 4 // 1 keyboard, 4 controllers
 
 typedef struct {
-    GameControllerInput inputs[GAME_MAX_INPUTS];
+    GameControllerInput controllers[HANDMADE_MAX_INPUTS];
 } GameInput;
+
+internal inline GameControllerInput *get_game_controller(GameInput *input,
+                                                         int controller_index) {
+    assert(controller_index < HANDMADE_MAX_INPUTS);
+    return &input->controllers[controller_index];
+}
 
 typedef struct {
     bool is_initialized;
