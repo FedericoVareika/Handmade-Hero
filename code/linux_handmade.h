@@ -26,6 +26,7 @@ typedef struct {
     int tone_hz;
     int running_sample_index;
     int latency_sample_count;
+    int secondary_buffer_size;
 } SDLSoundOutput;
 
 typedef struct {
@@ -34,6 +35,7 @@ typedef struct {
 } SDLControllers;
 
 typedef struct {
-    int bytes_to_queue;
-    int queued_bytes_start;
+    int play_cursor;
+    int write_cursor;
+    int ask_cursor;
 } SDLDebugTimeMarker;

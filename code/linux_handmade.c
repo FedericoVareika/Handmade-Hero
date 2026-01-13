@@ -22,7 +22,7 @@
 #define GET_AXIS(handle, axis)                                                 \
     SDL_GameControllerGetAxis(handle, SDL_CONTROLLER_AXIS_##axis)
 
-#define frames_of_audio_latency 1
+#define frames_of_audio_latency 2
 
 global bool game_running = true;
 global u64 performance_frequency;
@@ -146,15 +146,32 @@ internal void sdl_audio_callback(void *userdata, u8 *stream, int len) {
                            buffer->size; // + 2048 in handmade penguin
 }
 
-internal void sdl_init_audio(SDLSoundOutput *sound_output) {
+internal void sdl_init_audio(SDLSoundOutput *sound_output,
+                             SDLAudioRingBuffer *ring_buffer) {
     int buffer_size = sound_output->samples_per_second *
                       sound_output->bytes_per_sample; // 1 second
+
+    sound_output->secondary_buffer_size = buffer_size;
+
+    ring_buffer->play_cursor = 0;
+    ring_buffer->write_cursor = 0;
+    ring_buffer->size = buffer_size;
+    ring_buffer->data = mmap(0, ring_buffer->size, PROT_READ | PROT_WRITE,
+                             MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
+    if (!ring_buffer->data) {
+        // TODO(fede): allocation failed
+    }
 
     SDL_AudioSpec desired_audio_spec = {};
     desired_audio_spec.freq = sound_output->samples_per_second;
     desired_audio_spec.format = AUDIO_S16LSB; // 16 bit signed little endian
     desired_audio_spec.channels = 2;          // stereo
+    // desired_audio_spec.samples =
+    //     desired_audio_spec.freq / (desired_audio_spec.channels * 30);
+    // desired_audio_spec.samples /= 2;
     desired_audio_spec.samples = 512;
+    desired_audio_spec.callback = &sdl_audio_callback;
+    desired_audio_spec.userdata = (void *)ring_buffer;
 
     SDL_OpenAudio(&desired_audio_spec, 0);
 }
@@ -449,48 +466,53 @@ internal void sdl_debug_draw_cursor(SDLBackbuffer *backbuffer, int cursor,
 }
 
 internal void sdl_debug_sync_display(SDLBackbuffer *backbuffer,
+                                     SDLSoundOutput *sound_output,
                                      int debug_time_marker_count,
                                      SDLDebugTimeMarker *debug_time_markers) {
-    int pad_x = 0;
+    int pad_x = 15;
     int pad_y = 15;
 
+    int top = pad_y;
     int bottom = backbuffer->height - pad_y;
 
-    f32 coef =
-        (f32)(backbuffer->height - 2 * pad_y) / (4.0f * 48000.0f / 30.0f);
-    coef /= 8.0f;
+    f32 coef = (f32)(backbuffer->width - 2 * pad_x) /
+               (f32)sound_output->secondary_buffer_size;
 
-    coef = (f32)(backbuffer->height - 2 * pad_y) / (2048.0f * 4.0f);
-
+    // Draw frame boundries
     {
-        int y = bottom;
-        int left = 0;
-        int right = backbuffer->width;
-        while (y >= pad_y) {
-            sdl_debug_draw_horizontal(backbuffer, y, left, right, 0xAAAAAA);
-            // y -= coef * (4 * 48000 / 30);
-            y -= coef * 2048;
+        int x = 0;
+        while (x < sound_output->secondary_buffer_size) {
+            // sdl_debug_draw_cursor(backbuffer, x, 0, bottom + pad_y, coef,
+            //                       0xFFFFFF);
+            x += sound_output->samples_per_second *
+                 sound_output->bytes_per_sample / 30;
         }
     }
 
     for (int i = 0; i < debug_time_marker_count; i++) {
         SDLDebugTimeMarker marker = debug_time_markers[i];
 
-        int x_offset = i % backbuffer->width;
+        sdl_debug_draw_cursor(backbuffer, marker.ask_cursor, top, bottom, coef,
+                              0x00aa0000);
 
-        sdl_debug_draw_vertical(
-            backbuffer, x_offset + pad_x,
-            max(bottom - (int)((f32)marker.queued_bytes_start * coef), pad_y),
-            bottom, 0x0000FF00);
+        sdl_debug_draw_cursor(backbuffer, marker.play_cursor, top, bottom, coef,
+                              0x0000FF00);
 
-        sdl_debug_draw_vertical(
-            backbuffer, x_offset + pad_x,
-            max(bottom - (int)((f32)marker.bytes_to_queue * coef), pad_y),
-            bottom, 0x000000FF);
+        sdl_debug_draw_cursor(backbuffer, marker.write_cursor, top, bottom,
+                              coef, 0x000000FF);
+
+        // sdl_debug_draw_cursor(backbuffer, marker.byte_to_lock, top,
+        //                       bottom, coef, 0x00FF0000);
+
+        // sdl_debug_draw_vertical(
+        //     backbuffer, x_offset + pad_x,
+        //     max(bottom - (int)((f32)marker.queued_bytes_end * coef), pad_y),
+        //     bottom, 0x000000FF);
     }
 }
 
 int main(void) {
+
     if (!SDL_Init(SDL_INIT_VIDEO | SDL_INIT_GAMECONTROLLER | SDL_INIT_AUDIO)) {
         // TODO(fede): SDL did not work!!
     }
@@ -542,17 +564,16 @@ int main(void) {
     sound_output.bytes_per_sample = sizeof(i16) * 2;
 
     // NOTE(fede): 1 frame of audio latency
-    sound_output.latency_sample_count =
-        frames_of_audio_latency * sound_output.samples_per_second / 15;
+    sound_output.latency_sample_count = frames_of_audio_latency *
+                                        sound_output.samples_per_second /
+                                        game_update_rate;
 
-    // TODO(fede): maybe use 2048 bytes of latency because SDL's granularity is
-    //             2048 bytes.
-    // sound_output.latency_sample_count =
-    //     sound_output.latency_sample_count / 512 + 1;
-    // sound_output.latency_sample_count *= 512;
-    // sound_output.latency_sample_count += 10;
+    int samples_per_game_frame =
+        sound_output.samples_per_second / game_update_rate;
 
-    sdl_init_audio(&sound_output);
+    SDLAudioRingBuffer ring_buffer = {};
+
+    sdl_init_audio(&sound_output, &ring_buffer);
 
     bool audio_is_paused = true;
 
@@ -596,19 +617,32 @@ int main(void) {
     u64 last_counter = SDL_GetPerformanceCounter();
 
 #if HANDMADE_INTERNAL
-    int debug_time_marker_index = 0;
-    SDLDebugTimeMarker *debug_time_markers =
-        malloc(sizeof(SDLDebugTimeMarker) * backbuffer.width);
+    u32 debug_time_marker_index = 0;
+    SDLDebugTimeMarker debug_time_markers[23] = {};
 #endif
 
     int byte_to_lock;
     int bytes_to_write;
 
-    while (game_running) {
-        if (audio_is_paused) {
-            SDL_PauseAudioDevice(1, true);
-        }
+#if 0
+    {
+        SDL_PauseAudioDevice(1, false);
+        int bytes_to_queue = 1000000;
+        SDL_QueueAudio(1, malloc(bytes_to_queue), bytes_to_queue);
 
+        int queued_bytes_before = bytes_to_queue;
+        int queued_bytes_after = bytes_to_queue;
+        while (queued_bytes_after) {
+            queued_bytes_after = SDL_GetQueuedAudioSize(1);
+            if (queued_bytes_after != queued_bytes_before) {
+                printf("Queued bytes changed: %d\n", queued_bytes_after);
+                queued_bytes_before = queued_bytes_after;
+            }
+        }
+    }
+#endif
+
+    while (game_running) {
         GameControllerInput *old_keyboard_controller =
             get_game_controller(&old_input, 0);
         GameControllerInput *new_keyboard_controller =
@@ -697,21 +731,46 @@ int main(void) {
             }
         }
 
-        int queued_bytes;
-        {
-            // NOTE(fede): Sound buffer
+        int play_cursor;
+        int write_cursor;
+        int ask_cursor;
 
-            queued_bytes = SDL_GetQueuedAudioSize(1);
+        SDL_LockAudio();
 
-            int target_latency_bytes = sound_output.latency_sample_count *
-                                       sound_output.bytes_per_sample;
+        play_cursor = ring_buffer.play_cursor;
+        write_cursor = ring_buffer.write_cursor;
 
-            int bytes_to_write = target_latency_bytes - queued_bytes;
-            game_sound_buffer.sample_count =
-                max(bytes_to_write / sound_output.bytes_per_sample, 0);
-            game_sound_buffer.samples_per_second =
-                sound_output.samples_per_second;
+        int ask_seconds =
+            sdl_get_seconds_elapsed(last_counter, SDL_GetPerformanceCounter());
+        ask_cursor = (int)((f32)sound_output.samples_per_second * ask_seconds);
+
+        int play_frame_cursor =
+            play_cursor / (sound_output.samples_per_second / 30);
+        // ask_cursor += play_frame_cursor * (sound_output.samples_per_second / 30);
+        ask_cursor = play_frame_cursor * (sound_output.samples_per_second / 30);
+
+        int byte_to_lock = (sound_output.running_sample_index *
+                            sound_output.bytes_per_sample) %
+                           ring_buffer.size;
+
+        int target_cursor =
+            (ring_buffer.play_cursor + (sound_output.latency_sample_count *
+                                        sound_output.bytes_per_sample)) %
+            ring_buffer.size;
+
+        int bytes_to_write;
+        if (byte_to_lock > target_cursor) {
+            bytes_to_write = ring_buffer.size - byte_to_lock;
+            bytes_to_write += target_cursor;
+        } else {
+            bytes_to_write = target_cursor - byte_to_lock;
         }
+
+        SDL_UnlockAudio();
+
+        game_sound_buffer.samples_per_second = sound_output.samples_per_second;
+        game_sound_buffer.sample_count =
+            bytes_to_write / sound_output.bytes_per_sample;
 
         GameDisplayBuffer game_buffer = {};
         game_buffer.data = backbuffer.data;
@@ -721,13 +780,8 @@ int main(void) {
         game_update_and_render(&game_memory, &game_buffer, &game_sound_buffer,
                                &new_input);
 
-        int bytes_to_queue =
-            game_sound_buffer.sample_count * sound_output.bytes_per_sample;
-        if (SDL_QueueAudio(1, (void *)game_sound_buffer.samples,
-                           bytes_to_queue) == -1) {
-            // TODO(fede): logging
-            printf("Queue audio failed!\n");
-        }
+        sdl_fill_sound_buffer(&ring_buffer, &sound_output, &game_sound_buffer,
+                              byte_to_lock, bytes_to_write);
 
         // TODO(fede): This is probably copying the entire struct 3 times,
         //             check if these should be pointers instead (like casey
@@ -742,12 +796,10 @@ int main(void) {
             sdl_get_seconds_elapsed(last_counter, end_counter);
 
         linux_sleep_to_target(last_counter, target_seconds_per_frame);
-        // sdl_sleep_to_target(last_counter, target_seconds_per_frame);
 
         f64 seconds_elapsed_for_frame =
             sdl_get_seconds_elapsed(last_counter, SDL_GetPerformanceCounter());
 
-        // last_counter = end_counter;
         last_counter = SDL_GetPerformanceCounter();
 
 #if 0
@@ -759,7 +811,8 @@ int main(void) {
 
         {
 #if HANDMADE_INTERNAL
-            sdl_debug_sync_display(&backbuffer, debug_time_marker_index,
+            sdl_debug_sync_display(&backbuffer, &sound_output,
+                                   array_count(debug_time_markers),
                                    debug_time_markers);
 #endif
 
@@ -782,10 +835,13 @@ int main(void) {
         if (!audio_is_paused) {
             debug_time_markers[debug_time_marker_index++] =
                 (SDLDebugTimeMarker){
-                    .bytes_to_queue = bytes_to_queue,
-                    .queued_bytes_start = queued_bytes,
+                    .play_cursor = play_cursor,
+                    .write_cursor = write_cursor,
+                    .ask_cursor = ask_cursor,
                 };
-            debug_time_marker_index %= backbuffer.height;
+            if (debug_time_marker_index >= array_count(debug_time_markers)) {
+                debug_time_marker_index = 0;
+            }
         }
 #endif
 
