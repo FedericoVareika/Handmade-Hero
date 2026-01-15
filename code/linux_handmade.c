@@ -28,6 +28,7 @@ global bool game_running = true;
 global u64 performance_frequency;
 
 #if HANDMADE_INTERNAL
+global SDLDebugTimeMarker debug_time_marker = {};
 
 internal DebugReadFileResult debug_platform_read_entire_file(char *filename) {
     DebugReadFileResult result = {};
@@ -181,18 +182,18 @@ internal void sdl_init_audio(SDLSoundOutput *sound_output,
 internal void sdl_fill_sound_buffer(SDLAudioRingBuffer *ring_buffer,
                                     SDLSoundOutput *sound_output,
                                     GameSoundOutputBuffer *src_buffer,
-                                    int byte_to_lock, int bytes_to_write) {
+                                    SDLSoundWriteMarker write_marker) {
     i16 *sample_in = src_buffer->samples;
 
-    u8 *region1 = (u8 *)(ring_buffer->data) + byte_to_lock;
-    int region1_size = bytes_to_write;
+    u8 *region1 = (u8 *)(ring_buffer->data) + write_marker.byte_to_lock;
+    int region1_size = write_marker.bytes_to_write;
 
-    if (region1_size > ring_buffer->size - byte_to_lock) {
-        region1_size = ring_buffer->size - byte_to_lock;
+    if (region1_size > ring_buffer->size - write_marker.byte_to_lock) {
+        region1_size = ring_buffer->size - write_marker.byte_to_lock;
     }
 
     u8 *region2 = (u8 *)(ring_buffer->data);
-    int region2_size = bytes_to_write - region1_size;
+    int region2_size = write_marker.bytes_to_write - region1_size;
 
     int region1_sample_count = region1_size / sound_output->bytes_per_sample;
     i16 *sample_out = (i16 *)region1;
@@ -540,6 +541,117 @@ internal void sdl_debug_sync_display(SDLBackbuffer *backbuffer,
     }
 }
 
+SDLSoundWriteMarker sdl_get_sound_write_marker(SDLSoundOutput *sound_output,
+                                           SDLAudioRingBuffer *ring_buffer,
+                                           f32 target_seconds_per_frame,
+                                           u64 last_counter,
+                                           bool *sound_is_valid) {
+    assert(sound_is_valid != 0);
+
+    SDLSoundWriteMarker result = {};
+
+    int expected_frame_boundary_byte;
+
+    SDL_LockAudio();
+
+    int play_cursor = ring_buffer->play_cursor;
+    int write_cursor = ring_buffer->write_cursor;
+
+    u64 last_consumed_from = ring_buffer->last_consumed_from;
+
+    SDL_UnlockAudio();
+
+    // NOTE(fede): Check that the callback has been called at least once
+    if (last_consumed_from > 0) {
+        f32 seconds_until_frame_boundary =
+            target_seconds_per_frame -
+            sdl_get_seconds_elapsed(last_counter, SDL_GetPerformanceCounter());
+        int bytes_until_frame_boundary = (int)(seconds_until_frame_boundary *
+                                         (f32)sound_output->samples_per_second *
+                                         (f32)sound_output->bytes_per_sample);
+
+        f64 seconds_from_play_cursor = sdl_get_seconds_elapsed(
+            last_consumed_from, SDL_GetPerformanceCounter());
+
+        // NOTE(fede): Paused and continued
+        if (seconds_from_play_cursor > target_seconds_per_frame) {
+            expected_frame_boundary_byte =
+                play_cursor + sound_output->bytes_per_sound_frame;
+        } else {
+            int bytes_from_play_cursor = seconds_from_play_cursor *
+                                         sound_output->samples_per_second *
+                                         sound_output->bytes_per_sample;
+
+            expected_frame_boundary_byte = play_cursor +
+                                           bytes_from_play_cursor +
+                                           bytes_until_frame_boundary;
+
+#if HANDMADE_INTERNAL
+            debug_time_marker.play_cursor = play_cursor;
+            debug_time_marker.write_cursor = write_cursor;
+            debug_time_marker.expected_frame_boundary_byte =
+                expected_frame_boundary_byte;
+            debug_time_marker.expected_now_byte =
+                play_cursor + bytes_from_play_cursor;
+#endif
+        }
+
+    } else {
+        expected_frame_boundary_byte =
+            play_cursor + sound_output->bytes_per_sound_frame;
+    }
+
+    if (!*sound_is_valid) {
+        sound_output->running_sample_index =
+            write_cursor / sound_output->bytes_per_sample;
+        *sound_is_valid = true;
+    }
+
+    result.byte_to_lock =
+        (sound_output->running_sample_index * sound_output->bytes_per_sample) %
+        sound_output->secondary_buffer_size;
+
+    int safe_write_cursor = write_cursor;
+    if (safe_write_cursor < play_cursor) {
+        safe_write_cursor += sound_output->secondary_buffer_size;
+    }
+    assert(safe_write_cursor >= play_cursor);
+    safe_write_cursor += sound_output->safety_bytes;
+
+    // NOTE(fede): This was casey's expected_frame_boundary_byte
+    // expected_frame_boundary_byte = play_cursor +
+    // bytes_per_sound_frame;
+
+    bool sound_is_latent = safe_write_cursor >= expected_frame_boundary_byte;
+
+    // TODO(fede): test when sound is latent.
+    //             Sound not latent is kind of tested.
+    int target_cursor;
+    if (sound_is_latent) {
+        printf("sound is latent!\n");
+        target_cursor = write_cursor + sound_output->safety_bytes +
+                        sound_output->bytes_per_sound_frame;
+    } else {
+        target_cursor =
+            expected_frame_boundary_byte + sound_output->bytes_per_sound_frame;
+    }
+
+    target_cursor %= sound_output->secondary_buffer_size;
+
+    result.bytes_to_write = target_cursor - result.byte_to_lock;
+    if (result.byte_to_lock >= target_cursor) {
+        result.bytes_to_write += sound_output->secondary_buffer_size;
+    }
+
+#if HANDMADE_INTERNAL
+    debug_time_marker.target_cursor = target_cursor;
+    debug_time_marker.bytes_to_write = result.bytes_to_write;
+    debug_time_marker.byte_to_lock = result.byte_to_lock;
+#endif
+
+    return result;
+}
+
 int main(void) {
 
     if (!SDL_Init(SDL_INIT_VIDEO | SDL_INIT_GAMECONTROLLER | SDL_INIT_AUDIO)) {
@@ -591,6 +703,10 @@ int main(void) {
     sound_output.tone_hz = 512;
     sound_output.running_sample_index = 0;
     sound_output.bytes_per_sample = sizeof(i16) * 2;
+
+    sound_output.bytes_per_sound_frame = sound_output.samples_per_second *
+                                         sound_output.bytes_per_sample /
+                                         game_update_rate;
 
     // TODO(fede): Include safety bytes
     // sound_output.safety_bytes = sound_output.samples_per_second *
@@ -772,127 +888,18 @@ int main(void) {
 
         game_update_and_render(&game_memory, &game_buffer, &new_input);
 
-        int bytes_per_sound_frame =
-            sound_output.samples_per_second * sound_output.bytes_per_sample;
-        bytes_per_sound_frame /= game_update_rate;
-        int byte_to_lock;
-        int bytes_to_write;
-
-#if HANDMADE_INTERNAL
-        SDLDebugTimeMarker marker = {};
-#endif
-
-        {
-            int expected_frame_boundary_byte;
-
-            SDL_LockAudio();
-
-            int play_cursor = ring_buffer.play_cursor;
-            int write_cursor = ring_buffer.write_cursor;
-
-            if (ring_buffer.last_consumed_from) {
-                f32 seconds_until_frame_boundary =
-                    target_seconds_per_frame -
-                    sdl_get_seconds_elapsed(last_counter,
-                                            SDL_GetPerformanceCounter());
-                int bytes_until_frame_boundary =
-                    seconds_until_frame_boundary *
-                    sound_output.samples_per_second *
-                    sound_output.bytes_per_sample;
-
-                f64 seconds_from_play_cursor =
-                    sdl_get_seconds_elapsed(ring_buffer.last_consumed_from,
-                                            SDL_GetPerformanceCounter());
-
-                // NOTE(fede): Paused and continued
-                if (seconds_from_play_cursor > target_seconds_per_frame) {
-                    expected_frame_boundary_byte =
-                        play_cursor + bytes_per_sound_frame;
-                } else {
-                    int bytes_from_play_cursor =
-                        seconds_from_play_cursor *
-                        sound_output.samples_per_second *
-                        sound_output.bytes_per_sample;
-
-                    expected_frame_boundary_byte = play_cursor +
-                                                   bytes_from_play_cursor +
-                                                   bytes_until_frame_boundary;
-
-#if HANDMADE_INTERNAL
-                    marker.play_cursor = play_cursor;
-                    marker.write_cursor = write_cursor;
-                    marker.expected_frame_boundary_byte =
-                        expected_frame_boundary_byte;
-                    marker.expected_now_byte =
-                        play_cursor + bytes_from_play_cursor;
-#endif
-                }
-
-            } else {
-                expected_frame_boundary_byte =
-                    play_cursor + bytes_per_sound_frame;
-            }
-
-            SDL_UnlockAudio();
-
-            if (!sound_is_valid) {
-                sound_output.running_sample_index =
-                    write_cursor / sound_output.bytes_per_sample;
-                sound_is_valid = true;
-            }
-
-            byte_to_lock = (sound_output.running_sample_index *
-                            sound_output.bytes_per_sample) %
-                           sound_output.secondary_buffer_size;
-
-            int safe_write_cursor = write_cursor;
-            if (safe_write_cursor < play_cursor) {
-                safe_write_cursor += sound_output.secondary_buffer_size;
-            }
-            assert(safe_write_cursor >= play_cursor);
-            safe_write_cursor += sound_output.safety_bytes;
-
-            // NOTE(fede): This was casey's expected_frame_boundary_byte
-            // expected_frame_boundary_byte = play_cursor +
-            // bytes_per_sound_frame;
-
-            bool sound_is_latent =
-                safe_write_cursor >= expected_frame_boundary_byte;
-
-            // TODO(fede): test when sound is latent.
-            //             Sound not latent is kind of tested.
-            int target_cursor;
-            if (sound_is_latent) {
-                printf("sound is latent!\n");
-                target_cursor = write_cursor + sound_output.safety_bytes +
-                                bytes_per_sound_frame;
-            } else {
-                target_cursor =
-                    expected_frame_boundary_byte + bytes_per_sound_frame;
-            }
-
-            target_cursor %= sound_output.secondary_buffer_size;
-
-            bytes_to_write = target_cursor - byte_to_lock;
-            if (byte_to_lock >= target_cursor) {
-                bytes_to_write += sound_output.secondary_buffer_size;
-            }
-
-#if HANDMADE_INTERNAL
-            marker.target_cursor = target_cursor;
-            marker.bytes_to_write = bytes_to_write;
-            marker.byte_to_lock = byte_to_lock;
-#endif
-        }
+        SDLSoundWriteMarker write_marker =
+            sdl_get_sound_write_marker(&sound_output, &ring_buffer,
+                                   target_seconds_per_frame, last_counter, &sound_is_valid);
 
         game_sound_buffer.samples_per_second = sound_output.samples_per_second;
         game_sound_buffer.sample_count =
-            bytes_to_write / sound_output.bytes_per_sample;
+            write_marker.bytes_to_write / sound_output.bytes_per_sample;
 
         game_fill_sound_buffer(&game_memory, &game_sound_buffer);
 
         sdl_fill_sound_buffer(&ring_buffer, &sound_output, &game_sound_buffer,
-                              byte_to_lock, bytes_to_write);
+                              write_marker);
 
         // TODO(fede): This is probably copying the entire struct 3 times,
         //             check if these should be pointers instead (like casey
@@ -944,10 +951,12 @@ int main(void) {
 
 #if HANDMADE_INTERNAL
         if (!audio_is_paused) {
-            debug_time_markers[debug_time_marker_index++] = marker;
+            debug_time_markers[debug_time_marker_index++] = debug_time_marker;
             if (debug_time_marker_index >= array_count(debug_time_markers)) {
                 debug_time_marker_index = 0;
             }
+
+            debug_time_marker = (SDLDebugTimeMarker){};
         }
 #endif
 

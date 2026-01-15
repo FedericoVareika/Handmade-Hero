@@ -29,12 +29,18 @@ typedef struct {
     int latency_sample_count;
     int secondary_buffer_size;
     int safety_bytes;
+    int bytes_per_sound_frame;
 } SDLSoundOutput;
 
 typedef struct {
     int count;
     SDL_GameController *handles[MAX_CONTROLLERS];
 } SDLControllers;
+
+typedef struct {
+    int byte_to_lock; 
+    int bytes_to_write; 
+} SDLSoundWriteMarker;
 
 typedef struct {
     int play_cursor;
