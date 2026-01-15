@@ -45,6 +45,10 @@ typedef struct {
 typedef struct {
     int play_cursor;
     int write_cursor;
+
+    int flip_play_cursor;
+    int flip_write_cursor;
+
     int expected_frame_boundary_byte;
     int expected_now_byte;
     int byte_to_lock;

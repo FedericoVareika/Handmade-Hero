@@ -24,7 +24,8 @@
 
 #define frames_of_audio_latency 2
 
-global bool game_running = true;
+global bool global_game_running = true;
+global bool gloabal_pause = false;
 global u64 performance_frequency;
 
 #if HANDMADE_INTERNAL
@@ -277,9 +278,9 @@ internal void sdl_remove_controller(SDLControllers *controllers,
     controllers->count--;
 }
 
-internal bool handle_event(SDL_Event *event, SDLBackbuffer *backbuffer,
-                           SDLControllers *controllers,
-                           GameControllerInput *keyboard_controller) {
+internal bool sdl_handle_event(SDL_Event *event, SDLBackbuffer *backbuffer,
+                               SDLControllers *controllers,
+                               GameControllerInput *keyboard_controller) {
     switch (event->type) {
     case SDL_QUIT: {
         return true;
@@ -370,7 +371,12 @@ internal bool handle_event(SDL_Event *event, SDLBackbuffer *backbuffer,
         } break;
 
         case SDLK_RETURN: {
-            game_running = false;
+            global_game_running = false;
+        } break;
+
+        case SDLK_p: {
+            if (key_event.type == SDL_KEYDOWN)
+                gloabal_pause = !gloabal_pause;
         } break;
         }
     } break;
@@ -386,7 +392,8 @@ internal bool sdl_handle_events(SDLBackbuffer *backbuffer,
 
     SDL_Event event;
     while (SDL_PollEvent(&event)) {
-        if (handle_event(&event, backbuffer, controllers, keyboard_controller))
+        if (sdl_handle_event(&event, backbuffer, controllers,
+                             keyboard_controller))
             should_quit = true;
     }
 
@@ -445,6 +452,9 @@ internal void linux_sleep_to_target(u64 last_counter, f64 target_seconds) {
 
 internal void sdl_debug_draw_vertical(SDLBackbuffer *backbuffer, int x, int top,
                                       int bottom, u32 color) {
+    top = max(top, 0);
+    bottom = min(bottom, (int)backbuffer->height - 1);
+
     for (int y = top; y < bottom; y++) {
         u8 *pixel_pos = (u8 *)backbuffer->data +
                         x * backbuffer->bits_per_pixel / 8 +
@@ -456,6 +466,8 @@ internal void sdl_debug_draw_vertical(SDLBackbuffer *backbuffer, int x, int top,
 
 internal void sdl_debug_draw_horizontal(SDLBackbuffer *backbuffer, int y,
                                         int left, int right, u32 color) {
+    left = max(left, 0);
+    right = min(right, (int)backbuffer->width - 1);
     u32 *pixel_out =
         (u32 *)((u8 *)backbuffer->data + left * backbuffer->bits_per_pixel / 8 +
                 y * backbuffer->pitch);
@@ -490,9 +502,6 @@ internal void sdl_debug_sync_display(SDLBackbuffer *backbuffer,
         while (x < sound_output->secondary_buffer_size) {
             // sdl_debug_draw_cursor(backbuffer, x, 0, bottom + pad_y, coef,
             //                       0xFFFFFF);
-            // x += sound_output->samples_per_second *
-            //      sound_output->bytes_per_sample / 30;
-            // x += 2048;
             x += sound_output->samples_per_second *
                  sound_output->bytes_per_sample / 30;
         }
@@ -511,13 +520,16 @@ internal void sdl_debug_sync_display(SDLBackbuffer *backbuffer,
 
         sdl_debug_draw_cursor(backbuffer, marker.play_cursor, top,
                               marker_height, coef, 0x0000FF00);
-
         sdl_debug_draw_cursor(backbuffer, marker.write_cursor, top,
                               marker_height, coef, 0x000000FF);
 
+        sdl_debug_draw_cursor(backbuffer, marker.flip_play_cursor,
+                              top + marker_height, 10, coef, 0x0000FF00);
+        sdl_debug_draw_cursor(backbuffer, marker.flip_write_cursor,
+                              top + marker_height, 10, coef, 0x000000FF);
+
         sdl_debug_draw_cursor(backbuffer, marker.target_cursor, top - 10, 10,
                               coef, 0x00000099);
-
         sdl_debug_draw_cursor(backbuffer, marker.expected_now_byte, top - 10,
                               10, coef, 0x00009900);
 
@@ -542,10 +554,10 @@ internal void sdl_debug_sync_display(SDLBackbuffer *backbuffer,
 }
 
 SDLSoundWriteMarker sdl_get_sound_write_marker(SDLSoundOutput *sound_output,
-                                           SDLAudioRingBuffer *ring_buffer,
-                                           f32 target_seconds_per_frame,
-                                           u64 last_counter,
-                                           bool *sound_is_valid) {
+                                               SDLAudioRingBuffer *ring_buffer,
+                                               f32 target_seconds_per_frame,
+                                               u64 last_counter,
+                                               bool *sound_is_valid) {
     assert(sound_is_valid != 0);
 
     SDLSoundWriteMarker result = {};
@@ -566,15 +578,17 @@ SDLSoundWriteMarker sdl_get_sound_write_marker(SDLSoundOutput *sound_output,
         f32 seconds_until_frame_boundary =
             target_seconds_per_frame -
             sdl_get_seconds_elapsed(last_counter, SDL_GetPerformanceCounter());
-        int bytes_until_frame_boundary = (int)(seconds_until_frame_boundary *
-                                         (f32)sound_output->samples_per_second *
-                                         (f32)sound_output->bytes_per_sample);
+        int bytes_until_frame_boundary =
+            (int)(seconds_until_frame_boundary *
+                  (f32)sound_output->samples_per_second *
+                  (f32)sound_output->bytes_per_sample);
 
         f64 seconds_from_play_cursor = sdl_get_seconds_elapsed(
             last_consumed_from, SDL_GetPerformanceCounter());
 
         // NOTE(fede): Paused and continued
-        if (seconds_from_play_cursor > target_seconds_per_frame) {
+        if (seconds_until_frame_boundary < 0 ||
+            seconds_from_play_cursor > target_seconds_per_frame) {
             expected_frame_boundary_byte =
                 play_cursor + sound_output->bytes_per_sound_frame;
         } else {
@@ -792,7 +806,7 @@ int main(void) {
     }
 #endif
 
-    while (game_running) {
+    while (global_game_running) {
         GameControllerInput *old_keyboard_controller =
             get_game_controller(&old_input, 0);
         GameControllerInput *new_keyboard_controller =
@@ -807,7 +821,7 @@ int main(void) {
 
         if (sdl_handle_events(&backbuffer, &controllers,
                               new_keyboard_controller)) {
-            game_running = false;
+            global_game_running = false;
         }
 
         // NOTE(fede): controller input
@@ -881,6 +895,10 @@ int main(void) {
             }
         }
 
+        if (gloabal_pause) {
+            continue;
+        }
+
         GameDisplayBuffer game_buffer = {};
         game_buffer.data = backbuffer.data;
         game_buffer.height = backbuffer.height;
@@ -888,9 +906,9 @@ int main(void) {
 
         game_update_and_render(&game_memory, &game_buffer, &new_input);
 
-        SDLSoundWriteMarker write_marker =
-            sdl_get_sound_write_marker(&sound_output, &ring_buffer,
-                                   target_seconds_per_frame, last_counter, &sound_is_valid);
+        SDLSoundWriteMarker write_marker = sdl_get_sound_write_marker(
+            &sound_output, &ring_buffer, target_seconds_per_frame, last_counter,
+            &sound_is_valid);
 
         game_sound_buffer.samples_per_second = sound_output.samples_per_second;
         game_sound_buffer.sample_count =
@@ -929,6 +947,11 @@ int main(void) {
 
         {
 #if HANDMADE_INTERNAL
+            SDL_LockAudio();
+            debug_time_marker.flip_play_cursor = ring_buffer.play_cursor;
+            debug_time_marker.flip_write_cursor = ring_buffer.write_cursor;
+            SDL_UnlockAudio();
+
             sdl_debug_sync_display(
                 &backbuffer, &sound_output, array_count(debug_time_markers),
                 debug_time_markers, debug_time_marker_index - 1);
