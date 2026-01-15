@@ -332,6 +332,8 @@ internal bool handle_event(SDL_Event *event, SDLBackbuffer *backbuffer,
             break;
 
         switch (key_event.keysym.sym) {
+        // TODO(fede): Pressing both up and w triggers assert in
+        //             sdl_handle_keyboard_key
         case SDLK_UP:
         case SDLK_w: {
             sdl_handle_keyboard_key(&keyboard_controller->move_up,
