@@ -42,7 +42,7 @@
 
 #endif
 
-#define kilobytes(value) ((value)*1024)
+#define kilobytes(value) ((value) * 1024)
 #define megabytes(value) (kilobytes(value) * 1024)
 #define gigabytes(value) (megabytes(value) * 1024)
 #define terabytes(value) (gigabytes(value) * 1024)
@@ -172,8 +172,10 @@ typedef struct {
 
 internal void game_update_and_render(GameMemory *memory,
                                      GameDisplayBuffer *display_buffer,
-                                     GameSoundOutputBuffer *audio_buffer,
                                      GameInput *input);
+
+internal void game_fill_sound_buffer(GameMemory *memory,
+                                     GameSoundOutputBuffer *sound_buffer);
 
 // TODO(fede): the platform layer should not know about the game state, move
 //             this definition to another location

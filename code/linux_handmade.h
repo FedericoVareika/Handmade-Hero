@@ -14,6 +14,7 @@ typedef struct {
 } SDLBackbuffer;
 
 typedef struct {
+    u64 last_consumed_from;
     int size;
     int write_cursor;
     int play_cursor;
@@ -27,6 +28,7 @@ typedef struct {
     int running_sample_index;
     int latency_sample_count;
     int secondary_buffer_size;
+    int safety_bytes;
 } SDLSoundOutput;
 
 typedef struct {
@@ -37,5 +39,9 @@ typedef struct {
 typedef struct {
     int play_cursor;
     int write_cursor;
-    int ask_cursor;
+    int expected_frame_boundary_byte;
+    int expected_now_byte;
+    int byte_to_lock;
+    int bytes_to_write;
+    int target_cursor;
 } SDLDebugTimeMarker;

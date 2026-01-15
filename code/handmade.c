@@ -35,14 +35,14 @@ internal void render_buffer(GameDisplayBuffer *buffer, i32 x_offset,
 
 internal void game_update_and_render(GameMemory *memory,
                                      GameDisplayBuffer *display_buffer,
-                                     GameSoundOutputBuffer *audio_buffer,
                                      GameInput *input) {
     assert(sizeof(GameState) <= memory->permanent_storage_size);
     GameState *game_state = (GameState *)memory->permanent_storage;
 
     if (!memory->is_initialized) {
-        assert(&input->controllers[0]._end - &input->controllers[0].buttons[0] == 
-                array_count(input->controllers[0].buttons));
+        assert(&input->controllers[0]._end -
+                   &input->controllers[0].buttons[0] ==
+               array_count(input->controllers[0].buttons));
 
 #if 0
         DebugReadFileResult file_result =
@@ -86,6 +86,11 @@ internal void game_update_and_render(GameMemory *memory,
 
             if (controller->move_right.ended_down)
                 game_state->x_offset += 4;
+
+            if (controller->move_up.ended_down)
+                game_state->tone_hz = 256 + 128;
+            else 
+                game_state->tone_hz = 256;
         }
 
         if (controller->button_a.ended_down) {
@@ -93,6 +98,12 @@ internal void game_update_and_render(GameMemory *memory,
         }
     }
 
-    fill_audio_buffer(audio_buffer, game_state->tone_hz);
     render_buffer(display_buffer, game_state->x_offset, game_state->y_offset);
+}
+
+internal void game_fill_sound_buffer(GameMemory *memory,
+                                     GameSoundOutputBuffer *sound_buffer) {
+    assert(sizeof(GameState) <= memory->permanent_storage_size);
+    GameState *game_state = (GameState *)memory->permanent_storage;
+    fill_audio_buffer(sound_buffer, game_state->tone_hz);
 }
