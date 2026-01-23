@@ -21,8 +21,8 @@ internal void fill_audio_buffer(GameSoundOutputBuffer *buffer, int tone_hz) {
     t_sine = t_sine - t_sine_whole_part;
 }
 
-internal void render_buffer(GameDisplayBuffer *buffer, i32 x_offset,
-                            i32 y_offset) {
+internal void render_buffer(GameDisplayBuffer *buffer, int x_offset,
+                            int y_offset) {
     for (u32 y = 0; y < buffer->height; y++) {
         for (u32 x = 0; x < buffer->width; x++) {
             u8 g = y + y_offset;
@@ -33,9 +33,28 @@ internal void render_buffer(GameDisplayBuffer *buffer, i32 x_offset,
     }
 }
 
-internal void game_update_and_render(GameMemory *memory,
-                                     GameDisplayBuffer *display_buffer,
-                                     GameInput *input) {
+internal void debug_render_player(GameDisplayBuffer *buffer, int player_x,
+                                  int player_y) {
+    int player_width = 10;
+    int player_height = 10;
+
+    int top = min(player_y, (int)buffer->height - player_height);
+    top = max(player_y, 0);
+    int bottom = player_y + player_height;
+
+    int left = min(player_x, (int)buffer->width - player_width);
+    left = max(player_x, 0);
+    int right = player_x + player_width;
+
+    u32 player_color = 0xFFFFFFFF;
+    for (int y = top; y < bottom; y++) {
+        for (int x = left; x < right; x++) {
+            buffer->data[y * buffer->width + x] = player_color;
+        }
+    }
+}
+
+extern GAME_UPDATE_AND_RENDER(game_update_and_render) {
     assert(sizeof(GameState) <= memory->permanent_storage_size);
     GameState *game_state = (GameState *)memory->permanent_storage;
 
@@ -46,14 +65,14 @@ internal void game_update_and_render(GameMemory *memory,
 
 #if 0
         DebugReadFileResult file_result =
-            debug_platform_read_entire_file(__FILE__);
+            memory->debug_platform_read_entire_file(__FILE__);
         if (file_result.memory) {
-            if (!debug_platform_write_entire_file("test.txt", file_result.size,
+            if (!memory->debug_platform_write_entire_file("test.txt", file_result.size,
                                                   file_result.memory)) {
                 // handle error
                 printf("Error writing to test.txt\n");
             }
-            debug_platform_free_file_memory(file_result);
+            memory->debug_platform_free_file_memory(file_result);
         }
 #endif
 
@@ -73,24 +92,36 @@ internal void game_update_and_render(GameMemory *memory,
             game_state->x_offset += (int)(controller->avg_stick_x * 4.0f);
             game_state->y_offset += (int)(controller->avg_stick_y * 4.0f);
 
+            game_state->player_x += (int)(controller->avg_stick_x * 4.0f);
+            game_state->player_y += (int)(controller->avg_stick_y * 4.0f);
+
             game_state->tone_hz = 256 + (int)(controller->avg_stick_y * 128.0f);
         } else {
-            if (controller->move_up.ended_down)
+            if (controller->move_up.ended_down) {
                 game_state->y_offset -= 4;
+                game_state->player_y -= 4;
+            }
 
-            if (controller->move_left.ended_down)
+            if (controller->move_left.ended_down) {
                 game_state->x_offset -= 4;
+                game_state->player_x -= 4;
+            }
 
-            if (controller->move_down.ended_down)
+            if (controller->move_down.ended_down) {
                 game_state->y_offset += 4;
+                game_state->player_y += 4;
+            }
 
-            if (controller->move_right.ended_down)
+            if (controller->move_right.ended_down) {
                 game_state->x_offset += 4;
+                game_state->player_x += 4;
+            }
 
-            if (controller->move_up.ended_down)
+            if (controller->move_up.ended_down) {
                 game_state->tone_hz = 256 + 128;
-            else 
+            } else {
                 game_state->tone_hz = 256;
+            }
         }
 
         if (controller->button_a.ended_down) {
@@ -99,10 +130,11 @@ internal void game_update_and_render(GameMemory *memory,
     }
 
     render_buffer(display_buffer, game_state->x_offset, game_state->y_offset);
+    debug_render_player(display_buffer, game_state->player_x,
+                        game_state->player_y);
 }
 
-internal void game_fill_sound_buffer(GameMemory *memory,
-                                     GameSoundOutputBuffer *sound_buffer) {
+extern GAME_FILL_SOUND_BUFFER(game_fill_sound_buffer) {
     assert(sizeof(GameState) <= memory->permanent_storage_size);
     GameState *game_state = (GameState *)memory->permanent_storage;
     fill_audio_buffer(sound_buffer, game_state->tone_hz);

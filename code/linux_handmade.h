@@ -1,6 +1,22 @@
 #pragma once
 
+#include <fcntl.h>
+
+#include <time.h>
+#include <sys/stat.h>
+#include <SDL2/SDL.h>
+
 #define MAX_CONTROLLERS 4
+
+typedef struct {
+    bool is_valid; 
+    char *filename;
+    struct timespec last_modified;
+    void *handle;
+
+    GameUpdateAndRender *update_and_render;
+    GameFillSoundBuffer *fill_sound_buffer;
+} GameLib;
 
 typedef struct {
     SDL_Renderer *renderer;
@@ -55,3 +71,14 @@ typedef struct {
     int bytes_to_write;
     int target_cursor;
 } SDLDebugTimeMarker;
+
+typedef struct {
+    u64 game_memory_size;
+    void *game_memory_block; 
+
+    int recording_fd;
+    int recording_index; 
+
+    int playback_fd;
+    int playing_index; 
+} LinuxState;

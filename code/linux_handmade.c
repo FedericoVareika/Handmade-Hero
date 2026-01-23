@@ -1,21 +1,15 @@
-#include <stdint.h>
-
-#include <sys/mman.h>
-#include <time.h>
-
-#include <fcntl.h>
-#include <sys/stat.h>
-#include <unistd.h>
-
 #include <SDL2/SDL.h>
 
-#include <math.h>
-#include <stdint.h>
-
-#include "handmade.c"
 #include "handmade.h"
 
 #include "linux_handmade.h"
+
+#include <sys/mman.h>
+
+#include <fcntl.h>
+#include <unistd.h>
+
+#include <dlfcn.h>
 
 #define GET_BUTTON(handle, button)                                             \
     SDL_GameControllerGetButton(handle, SDL_CONTROLLER_BUTTON_##button)
@@ -278,8 +272,82 @@ internal void sdl_remove_controller(SDLControllers *controllers,
     controllers->count--;
 }
 
+internal void linux_begin_recording_input(LinuxState *linux_state,
+                                          int recording_index) {
+    linux_state->recording_index = recording_index;
+    int fd = open("foo.hmi", O_RDWR | O_CREAT, S_IRWXU);
+    if (fd == -1) {
+        // TODO(fede): logging
+        return;
+    }
+
+    linux_state->recording_fd = fd;
+
+    u64 bytes_written =
+        write(linux_state->recording_fd, linux_state->game_memory_block,
+              linux_state->game_memory_size);
+    if (bytes_written != linux_state->game_memory_size) {
+        // TODO(fede): logging / write loop
+    }
+}
+
+internal void linux_end_recording_input(LinuxState *linux_state) {
+    assert(linux_state->recording_fd);
+
+    close(linux_state->recording_fd);
+    linux_state->recording_fd = 0;
+    linux_state->recording_index = 0;
+}
+
+internal void linux_begin_input_playback(LinuxState *linux_state,
+                                         int playing_index) {
+    linux_state->playing_index = playing_index;
+    int fd = open("foo.hmi", O_RDONLY);
+    if (fd == -1) {
+        // TODO(fede): logging
+        return;
+    }
+
+    linux_state->playback_fd = fd;
+
+    u64 bytes_read =
+        read(linux_state->playback_fd, linux_state->game_memory_block,
+             linux_state->game_memory_size);
+    if (bytes_read != linux_state->game_memory_size) {
+        // TODO(fede): logging / read loop ?
+    }
+}
+
+internal void linux_end_input_playback(LinuxState *linux_state) {
+    assert(linux_state->playback_fd);
+
+    close(linux_state->playback_fd);
+    linux_state->playback_fd = 0;
+    linux_state->playing_index = 0;
+}
+
+internal void linux_record_input(LinuxState *linux_state,
+                                 GameInput recording_input) {
+    u64 bytes_written =
+        write(linux_state->recording_fd, &recording_input, sizeof(GameInput));
+    if (bytes_written != sizeof(recording_input)) {
+        // TODO(fede): logging / write loop
+    }
+}
+
+internal void linux_playback_input(LinuxState *linux_state,
+                                   GameInput *playback_input) {
+    u64 bytes_read =
+        read(linux_state->playback_fd, playback_input, sizeof(GameInput));
+    if (bytes_read == 0) {
+        linux_end_input_playback(linux_state);
+        linux_begin_input_playback(linux_state, 1);
+    }
+}
+
 internal bool sdl_handle_event(SDL_Event *event, SDLBackbuffer *backbuffer,
                                SDLControllers *controllers,
+                               LinuxState *linux_state,
                                GameControllerInput *keyboard_controller) {
     switch (event->type) {
     case SDL_QUIT: {
@@ -374,10 +442,25 @@ internal bool sdl_handle_event(SDL_Event *event, SDLBackbuffer *backbuffer,
             global_game_running = false;
         } break;
 
+#if HANDMADE_INTERNAL
+
         case SDLK_p: {
             if (key_event.type == SDL_KEYDOWN)
                 gloabal_pause = !gloabal_pause;
         } break;
+
+        case SDLK_l: {
+            if (key_event.type == SDL_KEYDOWN) {
+                if (linux_state->recording_index == 0) {
+                    linux_begin_recording_input(linux_state, 1);
+                } else {
+                    linux_end_recording_input(linux_state);
+                    linux_begin_input_playback(linux_state, 1);
+                }
+            }
+        } break;
+
+#endif // HANDMADE_INTERNAL
         }
     } break;
     }
@@ -387,12 +470,13 @@ internal bool sdl_handle_event(SDL_Event *event, SDLBackbuffer *backbuffer,
 
 internal bool sdl_handle_events(SDLBackbuffer *backbuffer,
                                 SDLControllers *controllers,
+                                LinuxState *linux_state,
                                 GameControllerInput *keyboard_controller) {
     int should_quit = false;
 
     SDL_Event event;
     while (SDL_PollEvent(&event)) {
-        if (sdl_handle_event(&event, backbuffer, controllers,
+        if (sdl_handle_event(&event, backbuffer, controllers, linux_state,
                              keyboard_controller))
             should_quit = true;
     }
@@ -666,7 +750,114 @@ SDLSoundWriteMarker sdl_get_sound_write_marker(SDLSoundOutput *sound_output,
     return result;
 }
 
+GAME_UPDATE_AND_RENDER(game_update_and_render_stub) {}
+
+GAME_FILL_SOUND_BUFFER(game_fill_sound_buffer_stub) {}
+
+internal bool linux_game_has_changed(GameLib *game, char *filename) {
+    bool result = false;
+
+    struct stat stat_;
+    if (stat(filename, &stat_) == -1) {
+        // TODO(fede): logging
+        assert(!"File does not exist.");
+    };
+
+    if (stat_.st_size == 0) {
+        return false;
+    }
+
+    if ((game->last_modified.tv_sec != stat_.st_mtim.tv_sec) ||
+        (game->last_modified.tv_nsec != stat_.st_mtim.tv_nsec)) {
+        result = true;
+        game->last_modified = stat_.st_mtim;
+    }
+
+    return result;
+}
+
+internal GameLib linux_load_gamelib(char *filename) {
+    GameLib result = {};
+
+    result.handle = dlopen(filename, RTLD_NOW);
+
+    if (result.handle) {
+        result.is_valid = true;
+        result.update_and_render =
+            dlsym(result.handle, "game_update_and_render");
+        result.fill_sound_buffer =
+            dlsym(result.handle, "game_fill_sound_buffer");
+    } else {
+        result.is_valid = false;
+        result.update_and_render = game_update_and_render_stub;
+        result.fill_sound_buffer = game_fill_sound_buffer_stub;
+    }
+
+    return result;
+}
+
+internal void linux_reload_gamelib(GameLib *game, char *filename) {
+    // TODO(fede): checking valid handle, etc.
+    dlclose(game->handle);
+    game->handle = dlopen(filename, RTLD_NOW);
+
+    if (game->handle) {
+        game->is_valid = true;
+        game->update_and_render = dlsym(game->handle, "game_update_and_render");
+        game->fill_sound_buffer = dlsym(game->handle, "game_fill_sound_buffer");
+    } else {
+        game->is_valid = false;
+        game->update_and_render = game_update_and_render_stub;
+        game->fill_sound_buffer = game_fill_sound_buffer_stub;
+    }
+}
+
+internal void linux_unload_gamelib(GameLib *game) {
+    if (game->is_valid) {
+        dlclose(game->handle);
+        game->update_and_render = game_update_and_render_stub;
+        game->fill_sound_buffer = game_fill_sound_buffer_stub;
+        game->is_valid = false;
+    } else {
+        assert(!game->handle);
+    }
+}
+
+internal void cat_strings(int source_a_count, char *source_a,
+                          int source_b_count, char *source_b, int dest_count,
+                          char *dest) {
+    for (int i = 0; i < source_a_count; i++) {
+        *dest++ = *source_a++;
+    }
+
+    for (int i = 0; i < source_b_count; i++) {
+        *dest++ = *source_b++;
+    }
+
+    *dest++ = 0;
+}
+
 int main(void) {
+
+    char game_dll_filename[PATH_MAX];
+    {
+        char filename[PATH_MAX] = {};
+        int filename_len =
+            readlink("/proc/self/exe", filename, array_count(filename));
+
+        char *one_past_last_slash = filename + filename_len;
+        for (char *scan = filename; *scan; scan++) {
+            if (*scan == '/') {
+                one_past_last_slash = scan + 1;
+            }
+        }
+
+        char dll_relative_filename[] = "handmade.so";
+
+        cat_strings(one_past_last_slash - filename, filename,
+                    array_count(dll_relative_filename), dll_relative_filename,
+                    array_count(game_dll_filename), game_dll_filename);
+    }
 
     if (!SDL_Init(SDL_INIT_VIDEO | SDL_INIT_GAMECONTROLLER | SDL_INIT_AUDIO)) {
         // TODO(fede): SDL did not work!!
@@ -755,20 +946,31 @@ int main(void) {
     void *base_address = 0;
 #endif
 
+    LinuxState linux_state = {};
+
     GameMemory game_memory = {};
     game_memory.permanent_storage_size = megabytes(64);
     game_memory.transient_storage_size = gigabytes((u64)4);
     {
-        u64 total_storage_size = game_memory.permanent_storage_size +
-                                 game_memory.transient_storage_size;
-        void *total_storage =
-            mmap(base_address, total_storage_size, PROT_READ | PROT_WRITE,
-                 MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
+        linux_state.game_memory_size = game_memory.permanent_storage_size +
+                                       game_memory.transient_storage_size;
+        linux_state.game_memory_block =
+            mmap(base_address, linux_state.game_memory_size,
+                 PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
 
-        game_memory.permanent_storage = total_storage;
-        game_memory.transient_storage =
-            (u8 *)total_storage + game_memory.permanent_storage_size;
+        game_memory.permanent_storage = linux_state.game_memory_block;
+        game_memory.transient_storage = (u8 *)linux_state.game_memory_block +
+                                        game_memory.permanent_storage_size;
     }
+
+#if HANDMADE_INTERNAL
+    game_memory.debug_platform_read_entire_file =
+        &debug_platform_read_entire_file;
+    game_memory.debug_platform_free_file_memory =
+        &debug_platform_free_file_memory;
+    game_memory.debug_platform_write_entire_file =
+        &debug_platform_write_entire_file;
+#endif
 
     if (!game_sound_buffer.samples || !game_memory.permanent_storage ||
         !game_memory.transient_storage) {
@@ -806,7 +1008,22 @@ int main(void) {
     }
 #endif
 
+    GameLib game = {};
+    game = linux_load_gamelib(game_dll_filename);
+    if (!game.is_valid) {
+        printf("Game is not valid: %s\n", dlerror());
+        printf("dll filename: %s\n", game_dll_filename);
+    }
+
     while (global_game_running) {
+
+        if (linux_game_has_changed(&game, game_dll_filename)) {
+            linux_reload_gamelib(&game, game_dll_filename);
+            if (!game.is_valid) {
+                printf("Game is not valid: %s\n", dlerror());
+            }
+        }
+
         GameControllerInput *old_keyboard_controller =
             get_game_controller(&old_input, 0);
         GameControllerInput *new_keyboard_controller =
@@ -819,7 +1036,7 @@ int main(void) {
                 old_keyboard_controller->buttons[i].ended_down;
         }
 
-        if (sdl_handle_events(&backbuffer, &controllers,
+        if (sdl_handle_events(&backbuffer, &controllers, &linux_state,
                               new_keyboard_controller)) {
             global_game_running = false;
         }
@@ -904,7 +1121,15 @@ int main(void) {
         game_buffer.height = backbuffer.height;
         game_buffer.width = backbuffer.width;
 
-        game_update_and_render(&game_memory, &game_buffer, &new_input);
+        if (linux_state.recording_index) {
+            linux_record_input(&linux_state, new_input);
+        }
+
+        if (linux_state.playing_index) {
+            linux_playback_input(&linux_state, &new_input);
+        }
+
+        game.update_and_render(&game_memory, &game_buffer, &new_input);
 
         SDLSoundWriteMarker write_marker = sdl_get_sound_write_marker(
             &sound_output, &ring_buffer, target_seconds_per_frame, last_counter,
@@ -914,7 +1139,7 @@ int main(void) {
         game_sound_buffer.sample_count =
             write_marker.bytes_to_write / sound_output.bytes_per_sample;
 
-        game_fill_sound_buffer(&game_memory, &game_sound_buffer);
+        game.fill_sound_buffer(&game_memory, &game_sound_buffer);
 
         sdl_fill_sound_buffer(&ring_buffer, &sound_output, &game_sound_buffer,
                               write_marker);

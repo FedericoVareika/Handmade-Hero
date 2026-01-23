@@ -1,5 +1,8 @@
 #pragma once
 
+#include <math.h>
+#include <stdint.h>
+
 /*
  * NOTE(fede):
  *
@@ -80,10 +83,17 @@ typedef struct {
     void *memory;
 } DebugReadFileResult;
 
-internal DebugReadFileResult debug_platform_read_entire_file(char *filename);
-internal void debug_platform_free_file_memory(DebugReadFileResult file_result);
-internal bool debug_platform_write_entire_file(char *filename, u64 size,
-                                               void *memory);
+#define DEBUG_PLATFORM_READ_ENTIRE_FILE(name)                                  \
+    DebugReadFileResult name(char *filename)
+typedef DEBUG_PLATFORM_READ_ENTIRE_FILE(DEBUGPlatformReadEntireFile);
+
+#define DEBUG_PLATFORM_FREE_FILE_MEMORY(name)                                  \
+    void name(DebugReadFileResult file_result)
+typedef DEBUG_PLATFORM_FREE_FILE_MEMORY(DEBUGPlatformFreeEntireFileMemory);
+
+#define DEBUG_PLATFORM_WRITE_ENTIRE_FILE(name)                                 \
+    bool name(char *filename, u64 size, void *memory)
+typedef DEBUG_PLATFORM_WRITE_ENTIRE_FILE(DEBUGPlatformWriteEntireFile);
 
 #endif
 
@@ -168,20 +178,38 @@ typedef struct {
 
     u64 transient_storage_size;
     void *transient_storage;
+
+#if HANDMADE_INTERNAL
+    DEBUGPlatformReadEntireFile *debug_platform_read_entire_file;
+    DEBUGPlatformFreeEntireFileMemory *debug_platform_free_file_memory;
+    DEBUGPlatformWriteEntireFile *debug_platform_write_entire_file;
+#endif
+
 } GameMemory;
 
-internal void game_update_and_render(GameMemory *memory,
-                                     GameDisplayBuffer *display_buffer,
-                                     GameInput *input);
+#define GAME_UPDATE_AND_RENDER(name)                                           \
+    void name(GameMemory *memory, GameDisplayBuffer *display_buffer,           \
+              GameInput *input)
+typedef GAME_UPDATE_AND_RENDER(GameUpdateAndRender);
 
-internal void game_fill_sound_buffer(GameMemory *memory,
-                                     GameSoundOutputBuffer *sound_buffer);
+extern GAME_UPDATE_AND_RENDER(game_update_and_render);
 
-// TODO(fede): the platform layer should not know about the game state, move
-//             this definition to another location
+#define GAME_FILL_SOUND_BUFFER(name)                                           \
+    void name(GameMemory *memory, GameSoundOutputBuffer *sound_buffer)
+typedef GAME_FILL_SOUND_BUFFER(GameFillSoundBuffer);
+
+extern GAME_FILL_SOUND_BUFFER(game_fill_sound_buffer);
+
+// TODO(fede): the platform layer should
+// not know about the game state, move
+//             this definition to another
+//             location
 
 typedef struct {
     int x_offset;
     int y_offset;
     int tone_hz;
+
+    int player_x;
+    int player_y;
 } GameState;
