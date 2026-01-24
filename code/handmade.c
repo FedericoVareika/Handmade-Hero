@@ -28,7 +28,7 @@ internal void render_buffer(GameDisplayBuffer *buffer, int x_offset,
             u8 g = y + y_offset;
             u8 b = x + x_offset;
             buffer->data[y * buffer->width + x] = (g << 8) + b;
-            buffer->data[y * buffer->width + x] = 0;
+            // buffer->data[y * buffer->width + x] = 0xFF0000FF;
         }
     }
 }

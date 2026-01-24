@@ -101,6 +101,10 @@ internal void sdl_resize_backbuffer(SDLBackbuffer *buffer, i32 width,
         SDL_DestroyTexture(buffer->texture);
     }
 
+    if (buffer->renderer) {
+        SDL_DestroyRenderer(buffer->renderer);
+    }
+
     u32 new_size = width * height * buffer->bits_per_pixel / 8;
     if (buffer->data && buffer->data_capacity < new_size) {
         munmap(buffer->data, buffer->data_capacity);
@@ -120,6 +124,8 @@ internal void sdl_resize_backbuffer(SDLBackbuffer *buffer, i32 width,
         buffer->data_capacity = new_size;
     }
 
+    buffer->renderer = SDL_CreateRenderer(
+        buffer->window, -1, SDL_RENDERER_PRESENTVSYNC | SDL_RENDERER_SOFTWARE);
     buffer->texture = SDL_CreateTexture(
         buffer->renderer, SDL_PIXELFORMAT_ARGB8888, SDL_TEXTUREACCESS_STREAMING,
         buffer->width, buffer->height);
@@ -871,12 +877,8 @@ int main(void) {
         "Handmade Hero", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED,
         width, height, SDL_WINDOW_RESIZABLE);
 
-    // TODO(fede): Check VSYNC
-    SDL_Renderer *renderer = SDL_CreateRenderer(
-        window, -1, SDL_RENDERER_SOFTWARE | SDL_RENDERER_PRESENTVSYNC);
-
     SDLBackbuffer backbuffer = {};
-    backbuffer.renderer = renderer;
+    backbuffer.window = window;
     backbuffer.bits_per_pixel = 32;
     sdl_resize_backbuffer(&backbuffer, width, height);
 
@@ -1182,7 +1184,7 @@ int main(void) {
                 debug_time_markers, debug_time_marker_index - 1);
 #endif
 
-            SDL_RenderClear(renderer);
+            SDL_RenderClear(backbuffer.renderer);
 
             if (SDL_UpdateTexture(backbuffer.texture, 0,
                                   (void *)backbuffer.data,
@@ -1190,11 +1192,12 @@ int main(void) {
                 // TODO(fede): Update texture failure
             }
 
-            if (SDL_RenderCopy(renderer, backbuffer.texture, 0, 0) <= 0) {
+            if (SDL_RenderCopy(backbuffer.renderer, backbuffer.texture, 0, 0) <=
+                0) {
                 // TODO(fede): Render texture failure
             }
 
-            SDL_RenderPresent(renderer);
+            SDL_RenderPresent(backbuffer.renderer);
         }
 
 #if HANDMADE_INTERNAL

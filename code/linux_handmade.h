@@ -19,6 +19,7 @@ typedef struct {
 } GameLib;
 
 typedef struct {
+    SDL_Window *window;
     SDL_Renderer *renderer;
     SDL_Texture *texture;
     u32 width;
