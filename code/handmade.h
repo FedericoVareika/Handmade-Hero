@@ -71,6 +71,10 @@ typedef double f64;
 
 typedef enum { false, true } bool;
 
+typedef struct {
+    int placeholder;
+} ThreadContext;
+
 /*
  * NOTE(fede): These are platform services that are to be called from the
  * game layer.
@@ -84,15 +88,15 @@ typedef struct {
 } DebugReadFileResult;
 
 #define DEBUG_PLATFORM_READ_ENTIRE_FILE(name)                                  \
-    DebugReadFileResult name(char *filename)
+    DebugReadFileResult name(ThreadContext *thread, char *filename)
 typedef DEBUG_PLATFORM_READ_ENTIRE_FILE(DEBUGPlatformReadEntireFile);
 
 #define DEBUG_PLATFORM_FREE_FILE_MEMORY(name)                                  \
-    void name(DebugReadFileResult file_result)
+    void name(ThreadContext *thread, DebugReadFileResult file_result)
 typedef DEBUG_PLATFORM_FREE_FILE_MEMORY(DEBUGPlatformFreeEntireFileMemory);
 
 #define DEBUG_PLATFORM_WRITE_ENTIRE_FILE(name)                                 \
-    bool name(char *filename, u64 size, void *memory)
+    bool name(ThreadContext *thread, char *filename, u64 size, void *memory)
 typedef DEBUG_PLATFORM_WRITE_ENTIRE_FILE(DEBUGPlatformWriteEntireFile);
 
 #endif
@@ -158,9 +162,34 @@ typedef struct {
     };
 } GameControllerInput;
 
+typedef struct {
+    int x;
+    int y;
+    int z; // TODO(fede): Set scroll wheel when updating input
+
+    union {
+        GameButton buttons[5];
+        struct {
+            GameButton left;
+            GameButton right;
+            GameButton middle;
+            GameButton thumb1; // thumb - back
+            GameButton thumb2; // thumb - forwards
+
+#if HANDMADE_ASSERT
+            GameButton _end;
+#endif
+        };
+    };
+} MouseInput;
+
 #define HANDMADE_MAX_INPUTS 1 + 4 // 1 keyboard, 4 controllers
 
 typedef struct {
+    f32 dt_for_frame;
+
+    MouseInput mouse_input;
+
     GameControllerInput controllers[HANDMADE_MAX_INPUTS];
 } GameInput;
 
@@ -188,28 +217,63 @@ typedef struct {
 } GameMemory;
 
 #define GAME_UPDATE_AND_RENDER(name)                                           \
-    void name(GameMemory *memory, GameDisplayBuffer *display_buffer,           \
-              GameInput *input)
+    void name(ThreadContext *thread, GameMemory *memory,                       \
+              GameDisplayBuffer *display_buffer, GameInput *input)
 typedef GAME_UPDATE_AND_RENDER(GameUpdateAndRender);
 
 extern GAME_UPDATE_AND_RENDER(game_update_and_render);
 
 #define GAME_FILL_SOUND_BUFFER(name)                                           \
-    void name(GameMemory *memory, GameSoundOutputBuffer *sound_buffer)
+    void name(ThreadContext *thread, GameMemory *memory,                       \
+              GameSoundOutputBuffer *sound_buffer)
 typedef GAME_FILL_SOUND_BUFFER(GameFillSoundBuffer);
 
 extern GAME_FILL_SOUND_BUFFER(game_fill_sound_buffer);
 
-// TODO(fede): the platform layer should
-// not know about the game state, move
-//             this definition to another
-//             location
+// TODO(fede): the platform layer should not know about the game state, move
+//             this definition to another location
 
 typedef struct {
-    int x_offset;
-    int y_offset;
-    int tone_hz;
+    u32 *tiles;
+} Tilemap;
 
-    int player_x;
-    int player_y;
+#define TILEMAP_WIDTH 17
+#define TILEMAP_HEIGHT 9
+
+typedef struct {
+    int tilemap_x;
+    int tilemap_y;
+
+    int tile_x;
+    int tile_y;
+
+    f32 x;
+    f32 y;
+} CanonicalPosition;
+
+typedef struct {
+    int tilemap_x;
+    int tilemap_y;
+
+    f32 x;
+    f32 y;
+} RawPosition;
+
+typedef struct {
+    Tilemap *tilemaps;
+    int count_x;
+    int count_y;
+
+    int tilemap_count_x;
+    int tilemap_count_y;
+
+    f32 tile_width;
+    f32 tile_height;
+
+    f32 upper_left_x;
+    f32 upper_left_y;
+} World;
+
+typedef struct {
+    CanonicalPosition player_pos;
 } GameState;

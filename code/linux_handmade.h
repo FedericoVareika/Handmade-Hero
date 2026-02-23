@@ -43,7 +43,6 @@ typedef struct {
     int bytes_per_sample;
     int tone_hz;
     int running_sample_index;
-    int latency_sample_count;
     int secondary_buffer_size;
     int safety_bytes;
     int bytes_per_sound_frame;
@@ -73,6 +72,8 @@ typedef struct {
     int target_cursor;
 } SDLDebugTimeMarker;
 
+#define LINUX_FILEPATH_MAX_COUNT PATH_MAX
+
 typedef struct {
     u64 game_memory_size;
     void *game_memory_block; 
@@ -82,4 +83,12 @@ typedef struct {
 
     int playback_fd;
     int playing_index; 
+
+    u64 bytes_written;
+    u64 bytes_read;
+    u64 memory_map_size;
+    void *memory_map;
+
+    char exe_filename[LINUX_FILEPATH_MAX_COUNT];
+    char *one_past_last_slash;
 } LinuxState;

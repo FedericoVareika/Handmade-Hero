@@ -11,6 +11,8 @@
 
 #include <dlfcn.h>
 
+#include <errno.h>
+
 #define GET_BUTTON(handle, button)                                             \
     SDL_GameControllerGetButton(handle, SDL_CONTROLLER_BUTTON_##button)
 #define GET_AXIS(handle, axis)                                                 \
@@ -19,13 +21,18 @@
 #define frames_of_audio_latency 2
 
 global bool global_game_running = true;
-global bool gloabal_pause = false;
+global bool global_pause = false;
 global u64 performance_frequency;
+
+internal inline f64 sdl_get_seconds_elapsed(u64 start_counter,
+                                            u64 end_counter) {
+    return (f64)(end_counter - start_counter) / performance_frequency;
+}
 
 #if HANDMADE_INTERNAL
 global SDLDebugTimeMarker debug_time_marker = {};
 
-internal DebugReadFileResult debug_platform_read_entire_file(char *filename) {
+internal DEBUG_PLATFORM_READ_ENTIRE_FILE(debug_platform_read_entire_file) {
     DebugReadFileResult result = {};
 
     int fd = open(filename, O_RDONLY);
@@ -58,14 +65,13 @@ internal DebugReadFileResult debug_platform_read_entire_file(char *filename) {
     return result;
 }
 
-internal void debug_platform_free_file_memory(DebugReadFileResult read_result) {
-    if (read_result.memory) {
-        munmap(read_result.memory, read_result.size);
+internal DEBUG_PLATFORM_FREE_FILE_MEMORY(debug_platform_free_file_memory) {
+    if (file_result.memory) {
+        munmap(file_result.memory, file_result.size);
     }
 }
 
-internal bool debug_platform_write_entire_file(char *filename, u64 size,
-                                               void *memory) {
+internal DEBUG_PLATFORM_WRITE_ENTIRE_FILE(debug_platform_write_entire_file) {
     /*
      * NOTE(fede): When O_CREAT flag is set, a *mode* flag must be set as well.
      *
@@ -94,6 +100,65 @@ internal bool debug_platform_write_entire_file(char *filename, u64 size,
 }
 
 #endif
+
+internal int string_len(char *str) {
+    int result = 0;
+    while (*str++)
+        result++;
+    return result;
+}
+
+internal void cat_strings(int source_a_count, char *source_a,
+                          int source_b_count, char *source_b, int dest_count,
+                          char *dest) {
+    for (int i = 0; i < source_a_count; i++) {
+        *dest++ = *source_a++;
+    }
+
+    for (int i = 0; i < source_b_count; i++) {
+        *dest++ = *source_b++;
+    }
+
+    *dest++ = 0;
+}
+
+internal void linux_get_exe_path(LinuxState *state) {
+    int filename_len = readlink("/proc/self/exe", state->exe_filename,
+                                array_count(state->exe_filename));
+
+    state->one_past_last_slash = state->exe_filename + filename_len;
+    for (char *scan = state->exe_filename; *scan; scan++) {
+        if (*scan == '/') {
+            state->one_past_last_slash = scan + 1;
+        }
+    }
+}
+
+internal void linux_build_global_filename_at_exe_location(LinuxState *state,
+                                                          char *dest,
+                                                          char *filename) {
+    cat_strings(state->one_past_last_slash - state->exe_filename,
+                state->exe_filename, string_len(filename), filename,
+                LINUX_FILEPATH_MAX_COUNT, dest);
+}
+
+#if 1
+internal void sdl_reset_renderer(SDLBackbuffer *buffer) {
+    if (buffer->renderer) {
+        SDL_DestroyRenderer(buffer->renderer);
+    }
+    buffer->renderer = SDL_CreateRenderer(
+        buffer->window, -1, SDL_RENDERER_PRESENTVSYNC | SDL_RENDERER_SOFTWARE);
+
+    if (buffer->texture) {
+        SDL_DestroyTexture(buffer->texture);
+    }
+    buffer->texture = SDL_CreateTexture(
+        buffer->renderer, SDL_PIXELFORMAT_ARGB8888, SDL_TEXTUREACCESS_STREAMING,
+        buffer->width, buffer->height);
+}
+
+#else
 
 internal void sdl_resize_backbuffer(SDLBackbuffer *buffer, i32 width,
                                     i32 height) {
@@ -130,6 +195,7 @@ internal void sdl_resize_backbuffer(SDLBackbuffer *buffer, i32 width,
         buffer->renderer, SDL_PIXELFORMAT_ARGB8888, SDL_TEXTUREACCESS_STREAMING,
         buffer->width, buffer->height);
 }
+#endif
 
 internal void sdl_audio_callback(void *userdata, u8 *stream, int len) {
     SDLAudioRingBuffer *buffer = (SDLAudioRingBuffer *)userdata;
@@ -216,7 +282,15 @@ internal void sdl_fill_sound_buffer(SDLAudioRingBuffer *ring_buffer,
 }
 
 internal void sdl_handle_keyboard_key(GameButton *new_state, bool is_down) {
-    assert(new_state->ended_down != is_down);
+    // NOTE(fede): This used to break when pressing both 'w' and up at the same
+    //             time, or when pausing the game whilst pressing down a key,
+    //             later unpausing and pressing it again.
+    //
+    // assert(new_state->ended_down != is_down);
+
+    if (new_state->ended_down == is_down)
+        return;
+
     new_state->ended_down = is_down;
     new_state->half_transition_count++;
 }
@@ -278,82 +352,65 @@ internal void sdl_remove_controller(SDLControllers *controllers,
     controllers->count--;
 }
 
-internal void linux_begin_recording_input(LinuxState *linux_state,
+internal void linux_get_input_state_filepath(LinuxState *state, char *dest,
+                                             int index) {
+    assert(index < 9 && index >= 0);
+    char input_state_filename[] = "_.hmi";
+    input_state_filename[0] = '0' + index;
+
+    linux_build_global_filename_at_exe_location(state, dest,
+                                                input_state_filename);
+}
+
+internal void linux_begin_recording_input(LinuxState *state,
                                           int recording_index) {
-    linux_state->recording_index = recording_index;
-    int fd = open("foo.hmi", O_RDWR | O_CREAT, S_IRWXU);
-    if (fd == -1) {
-        // TODO(fede): logging
-        return;
-    }
+    memcpy(state->memory_map, state->game_memory_block,
+           state->game_memory_size);
 
-    linux_state->recording_fd = fd;
-
-    u64 bytes_written =
-        write(linux_state->recording_fd, linux_state->game_memory_block,
-              linux_state->game_memory_size);
-    if (bytes_written != linux_state->game_memory_size) {
-        // TODO(fede): logging / write loop
-    }
+    state->bytes_written = state->game_memory_size;
+    state->recording_index = recording_index;
+    state->playing_index = 0;
 }
 
-internal void linux_end_recording_input(LinuxState *linux_state) {
-    assert(linux_state->recording_fd);
-
-    close(linux_state->recording_fd);
-    linux_state->recording_fd = 0;
-    linux_state->recording_index = 0;
+internal void linux_end_recording_input(LinuxState *state) {
+    state->recording_index = 0;
 }
 
-internal void linux_begin_input_playback(LinuxState *linux_state,
-                                         int playing_index) {
-    linux_state->playing_index = playing_index;
-    int fd = open("foo.hmi", O_RDONLY);
-    if (fd == -1) {
-        // TODO(fede): logging
-        return;
-    }
+internal void linux_begin_input_playback(LinuxState *state, int playing_index) {
+    memcpy(state->game_memory_block, state->memory_map,
+           state->game_memory_size);
 
-    linux_state->playback_fd = fd;
-
-    u64 bytes_read =
-        read(linux_state->playback_fd, linux_state->game_memory_block,
-             linux_state->game_memory_size);
-    if (bytes_read != linux_state->game_memory_size) {
-        // TODO(fede): logging / read loop ?
-    }
+    state->bytes_read = state->game_memory_size;
+    state->playing_index = playing_index;
 }
 
-internal void linux_end_input_playback(LinuxState *linux_state) {
-    assert(linux_state->playback_fd);
-
-    close(linux_state->playback_fd);
-    linux_state->playback_fd = 0;
-    linux_state->playing_index = 0;
+internal void linux_end_input_playback(LinuxState *state) {
+    state->bytes_read = 0;
+    state->playing_index = 0;
 }
 
-internal void linux_record_input(LinuxState *linux_state,
-                                 GameInput recording_input) {
-    u64 bytes_written =
-        write(linux_state->recording_fd, &recording_input, sizeof(GameInput));
-    if (bytes_written != sizeof(recording_input)) {
-        // TODO(fede): logging / write loop
-    }
+internal void linux_record_input(LinuxState *state, GameInput recording_input) {
+    u64 bytes_to_write = sizeof(GameInput);
+    memcpy(state->memory_map + state->bytes_written, (void *)&recording_input,
+           bytes_to_write);
+    state->bytes_written += bytes_to_write;
 }
 
-internal void linux_playback_input(LinuxState *linux_state,
+internal void linux_playback_input(LinuxState *state,
                                    GameInput *playback_input) {
-    u64 bytes_read =
-        read(linux_state->playback_fd, playback_input, sizeof(GameInput));
-    if (bytes_read == 0) {
-        linux_end_input_playback(linux_state);
-        linux_begin_input_playback(linux_state, 1);
+    u64 bytes_to_read = sizeof(GameInput);
+    memcpy((void *)playback_input, state->memory_map + state->bytes_read,
+           bytes_to_read);
+    state->bytes_read += bytes_to_read;
+
+    if (state->bytes_read == state->bytes_written) {
+        linux_end_input_playback(state);
+        linux_begin_input_playback(state, 1);
     }
 }
 
 internal bool sdl_handle_event(SDL_Event *event, SDLBackbuffer *backbuffer,
-                               SDLControllers *controllers,
-                               LinuxState *linux_state,
+                               SDLControllers *controllers, LinuxState *state,
                                GameControllerInput *keyboard_controller) {
     switch (event->type) {
     case SDL_QUIT: {
@@ -363,8 +420,12 @@ internal bool sdl_handle_event(SDL_Event *event, SDLBackbuffer *backbuffer,
         SDL_WindowEvent window_event = event->window;
         switch (window_event.event) {
         case SDL_WINDOWEVENT_RESIZED: {
-            sdl_resize_backbuffer(backbuffer, window_event.data1,
-                                  window_event.data2);
+
+            // NOTE(fede): 
+            //  window_event.data1 -> new width
+            //  window_event.data2 -> new height
+
+            sdl_reset_renderer(backbuffer);
         } break;
         }
     } break;
@@ -408,8 +469,6 @@ internal bool sdl_handle_event(SDL_Event *event, SDLBackbuffer *backbuffer,
             break;
 
         switch (key_event.keysym.sym) {
-        // TODO(fede): Pressing both up and w triggers assert in
-        //             sdl_handle_keyboard_key
         case SDLK_UP:
         case SDLK_w: {
             sdl_handle_keyboard_key(&keyboard_controller->move_up,
@@ -452,16 +511,18 @@ internal bool sdl_handle_event(SDL_Event *event, SDLBackbuffer *backbuffer,
 
         case SDLK_p: {
             if (key_event.type == SDL_KEYDOWN)
-                gloabal_pause = !gloabal_pause;
+                global_pause = !global_pause;
         } break;
 
         case SDLK_l: {
             if (key_event.type == SDL_KEYDOWN) {
-                if (linux_state->recording_index == 0) {
-                    linux_begin_recording_input(linux_state, 1);
+                if (state->playing_index != 0) {
+                    linux_end_input_playback(state);
+                } else if (state->recording_index == 0) {
+                    linux_begin_recording_input(state, 1);
                 } else {
-                    linux_end_recording_input(linux_state);
-                    linux_begin_input_playback(linux_state, 1);
+                    linux_end_recording_input(state);
+                    linux_begin_input_playback(state, 1);
                 }
             }
         } break;
@@ -475,24 +536,18 @@ internal bool sdl_handle_event(SDL_Event *event, SDLBackbuffer *backbuffer,
 }
 
 internal bool sdl_handle_events(SDLBackbuffer *backbuffer,
-                                SDLControllers *controllers,
-                                LinuxState *linux_state,
+                                SDLControllers *controllers, LinuxState *state,
                                 GameControllerInput *keyboard_controller) {
     int should_quit = false;
 
     SDL_Event event;
     while (SDL_PollEvent(&event)) {
-        if (sdl_handle_event(&event, backbuffer, controllers, linux_state,
+        if (sdl_handle_event(&event, backbuffer, controllers, state,
                              keyboard_controller))
             should_quit = true;
     }
 
     return should_quit;
-}
-
-internal inline f64 sdl_get_seconds_elapsed(u64 start_counter,
-                                            u64 end_counter) {
-    return (f64)(end_counter - start_counter) / performance_frequency;
 }
 
 internal void sdl_sleep_to_target(u64 last_counter, f64 target_seconds) {
@@ -829,40 +884,73 @@ internal void linux_unload_gamelib(GameLib *game) {
     }
 }
 
-internal void cat_strings(int source_a_count, char *source_a,
-                          int source_b_count, char *source_b, int dest_count,
-                          char *dest) {
-    for (int i = 0; i < source_a_count; i++) {
-        *dest++ = *source_a++;
-    }
-
-    for (int i = 0; i < source_b_count; i++) {
-        *dest++ = *source_b++;
-    }
-
-    *dest++ = 0;
-}
-
 int main(void) {
+    LinuxState state = {};
 
-    char game_dll_filename[PATH_MAX];
+    linux_get_exe_path(&state);
+    char game_dll_filename[LINUX_FILEPATH_MAX_COUNT];
+
+    linux_build_global_filename_at_exe_location(&state, game_dll_filename,
+                                                "handmade.so");
+
+#if HANDMADE_INTERNAL
+    void *base_address = (void *)terabytes((u64)2);
+#else
+    void *base_address = 0;
+#endif
+
+    GameMemory game_memory = {};
+    game_memory.permanent_storage_size = megabytes(64);
+    game_memory.transient_storage_size = gigabytes((u64)1);
     {
-        char filename[PATH_MAX] = {};
-        int filename_len =
-            readlink("/proc/self/exe", filename, array_count(filename));
+        state.game_memory_size = game_memory.permanent_storage_size +
+                                 game_memory.transient_storage_size;
+        state.game_memory_block =
+            mmap(base_address, state.game_memory_size, PROT_READ | PROT_WRITE,
+                 MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
 
-        char *one_past_last_slash = filename + filename_len;
-        for (char *scan = filename; *scan; scan++) {
-            if (*scan == '/') {
-                one_past_last_slash = scan + 1;
-            }
+        game_memory.permanent_storage = state.game_memory_block;
+        game_memory.transient_storage =
+            (u8 *)state.game_memory_block + game_memory.permanent_storage_size;
+    }
+
+    // NOTE(fede): This is piggy, we are mapping a file the same size as the
+    //             game memory, therefore doubling the memory used.
+    {
+        char state_filename[LINUX_FILEPATH_MAX_COUNT];
+        linux_get_input_state_filepath(&state, state_filename, 1);
+
+        int fd = open(state_filename, O_RDWR | O_CREAT, S_IRWXU);
+        if (fd == -1) {
+            // TODO(fede): logging
+            return 0;
         }
 
-        char dll_relative_filename[] = "handmade.so";
+        int one_hour_of_frames = 30 * 60 * 60;
+        state.memory_map_size =
+            one_hour_of_frames * sizeof(GameInput) + state.game_memory_size;
 
-        cat_strings(one_past_last_slash - filename, filename,
-                    array_count(dll_relative_filename), dll_relative_filename,
-                    array_count(game_dll_filename), game_dll_filename);
+        printf("Game memory size: %.2fGB\n",
+               (f32)state.game_memory_size / (f32)gigabytes(1));
+        printf("Memory map size: %.2fGB\n",
+               (f32)state.memory_map_size / (f32)gigabytes(1));
+
+        if (ftruncate(fd, state.memory_map_size) == -1) {
+            printf("Could not truncate file: %s | %d\n", strerror(errno),
+                   errno);
+            return 1;
+        }
+
+        int offset = 0;
+        state.memory_map =
+            mmap(0, state.memory_map_size, PROT_READ | PROT_WRITE, MAP_PRIVATE,
+                 fd, offset);
+
+        if (state.memory_map == MAP_FAILED) {
+            printf("Could not allocate memory: %s | %d\n", strerror(errno),
+                   errno);
+            return 1;
+        }
     }
 
     if (!SDL_Init(SDL_INIT_VIDEO | SDL_INIT_GAMECONTROLLER | SDL_INIT_AUDIO)) {
@@ -880,7 +968,21 @@ int main(void) {
     SDLBackbuffer backbuffer = {};
     backbuffer.window = window;
     backbuffer.bits_per_pixel = 32;
-    sdl_resize_backbuffer(&backbuffer, width, height);
+    // Allocate backbuffer
+    {
+        backbuffer.width = width;
+        backbuffer.height = height;
+        backbuffer.pitch = width * backbuffer.bits_per_pixel / 8;
+
+        u32 buffer_size = width * height * backbuffer.bits_per_pixel / 8;
+        backbuffer.data = mmap(0, buffer_size, PROT_READ | PROT_WRITE,
+                               MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
+        if (!backbuffer.data) {
+            // TODO(fede): allocation failed
+        }
+
+        sdl_reset_renderer(&backbuffer);
+    }
 
     // NOTE(fede): get highest display refresh rate
     int display_index = SDL_GetWindowDisplayIndex(window);
@@ -899,8 +1001,7 @@ int main(void) {
 
     int refresh_rate = mode.refresh_rate;
 
-    // TODO(fede): Remove overwrite and chose frame rate reliably.
-    int game_update_rate = 30;
+    int game_update_rate = refresh_rate / 2;
     f32 target_seconds_per_frame = 1.0f / (f32)game_update_rate;
 
     SDLControllers controllers = {};
@@ -921,14 +1022,6 @@ int main(void) {
     //                             / 2;
     // sound_output.safety_bytes = 0;
 
-    // NOTE(fede): 1 frame of audio latency
-    sound_output.latency_sample_count = frames_of_audio_latency *
-                                        sound_output.samples_per_second /
-                                        game_update_rate;
-
-    int samples_per_game_frame =
-        sound_output.samples_per_second / game_update_rate;
-
     SDLAudioRingBuffer ring_buffer = {};
 
     sdl_init_audio(&sound_output, &ring_buffer);
@@ -941,29 +1034,6 @@ int main(void) {
     game_sound_buffer.samples =
         mmap(0, sound_output.samples_per_second * sound_output.bytes_per_sample,
              PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
-
-#if HANDMADE_INTERNAL
-    void *base_address = (void *)terabytes((u64)2);
-#else
-    void *base_address = 0;
-#endif
-
-    LinuxState linux_state = {};
-
-    GameMemory game_memory = {};
-    game_memory.permanent_storage_size = megabytes(64);
-    game_memory.transient_storage_size = gigabytes((u64)4);
-    {
-        linux_state.game_memory_size = game_memory.permanent_storage_size +
-                                       game_memory.transient_storage_size;
-        linux_state.game_memory_block =
-            mmap(base_address, linux_state.game_memory_size,
-                 PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
-
-        game_memory.permanent_storage = linux_state.game_memory_block;
-        game_memory.transient_storage = (u8 *)linux_state.game_memory_block +
-                                        game_memory.permanent_storage_size;
-    }
 
 #if HANDMADE_INTERNAL
     game_memory.debug_platform_read_entire_file =
@@ -982,6 +1052,9 @@ int main(void) {
 
     GameInput old_input = {};
     GameInput new_input = {};
+
+    new_input.dt_for_frame = target_seconds_per_frame;
+    old_input.dt_for_frame = target_seconds_per_frame;
 
     u64 last_counter = SDL_GetPerformanceCounter();
 
@@ -1038,9 +1111,21 @@ int main(void) {
                 old_keyboard_controller->buttons[i].ended_down;
         }
 
-        if (sdl_handle_events(&backbuffer, &controllers, &linux_state,
+        if (sdl_handle_events(&backbuffer, &controllers, &state,
                               new_keyboard_controller)) {
             global_game_running = false;
+        }
+
+        // NOTE(fede): mouse input
+        {
+            // TODO(fede): Update mouse.z (scroll wheel) position
+            u32 mouse_flags = SDL_GetMouseState(&new_input.mouse_input.x,
+                                                &new_input.mouse_input.y);
+            for (int i = 0; i < 3; i++) {
+                bool is_down = (mouse_flags & SDL_BUTTON(i + 1)) > 0;
+                sdl_handle_button(&old_input.mouse_input.buttons[i], is_down,
+                                  &new_input.mouse_input.buttons[i]);
+            }
         }
 
         // NOTE(fede): controller input
@@ -1092,6 +1177,8 @@ int main(void) {
                 i16 left_stick_y = GET_AXIS(controller_handle, LEFTY);
                 i16 left_stick_x = GET_AXIS(controller_handle, LEFTX);
 
+                new_controller_state->is_analog =
+                    old_controller_state->is_analog;
                 {
                     // NOTE: Stick is said to be centered ~8000, this is
                     //       specified in the SDL Wiki:
@@ -1099,14 +1186,22 @@ int main(void) {
                     f32 x = sdl_normalize_stick(left_stick_x, 8000);
                     f32 y = sdl_normalize_stick(left_stick_y, 8000);
 
-                    if (GET_BUTTON(controller_handle, DPAD_LEFT))
+                    if (GET_BUTTON(controller_handle, DPAD_LEFT)) {
                         x = -1.0f;
-                    if (GET_BUTTON(controller_handle, DPAD_RIGHT))
+                        new_controller_state->is_analog = false;
+                    }
+                    if (GET_BUTTON(controller_handle, DPAD_RIGHT)) {
                         x = 1.0f;
-                    if (GET_BUTTON(controller_handle, DPAD_UP))
+                        new_controller_state->is_analog = false;
+                    }
+                    if (GET_BUTTON(controller_handle, DPAD_UP)) {
                         y = -1.0f;
-                    if (GET_BUTTON(controller_handle, DPAD_DOWN))
+                        new_controller_state->is_analog = false;
+                    }
+                    if (GET_BUTTON(controller_handle, DPAD_DOWN)) {
                         y = 1.0f;
+                        new_controller_state->is_analog = false;
+                    }
 
                     sdl_update_controller_sticks(old_controller_state,
                                                  new_controller_state, x, y);
@@ -1114,24 +1209,25 @@ int main(void) {
             }
         }
 
-        if (gloabal_pause) {
+        if (global_pause) {
             continue;
         }
 
         GameDisplayBuffer game_buffer = {};
         game_buffer.data = backbuffer.data;
-        game_buffer.height = backbuffer.height;
-        game_buffer.width = backbuffer.width;
+        game_buffer.height = height;
+        game_buffer.width = width;
 
-        if (linux_state.recording_index) {
-            linux_record_input(&linux_state, new_input);
+        if (state.recording_index) {
+            linux_record_input(&state, new_input);
         }
 
-        if (linux_state.playing_index) {
-            linux_playback_input(&linux_state, &new_input);
+        if (state.playing_index) {
+            linux_playback_input(&state, &new_input);
         }
 
-        game.update_and_render(&game_memory, &game_buffer, &new_input);
+        ThreadContext thread = {};
+        game.update_and_render(&thread, &game_memory, &game_buffer, &new_input);
 
         SDLSoundWriteMarker write_marker = sdl_get_sound_write_marker(
             &sound_output, &ring_buffer, target_seconds_per_frame, last_counter,
@@ -1141,7 +1237,7 @@ int main(void) {
         game_sound_buffer.sample_count =
             write_marker.bytes_to_write / sound_output.bytes_per_sample;
 
-        game.fill_sound_buffer(&game_memory, &game_sound_buffer);
+        game.fill_sound_buffer(&thread, &game_memory, &game_sound_buffer);
 
         sdl_fill_sound_buffer(&ring_buffer, &sound_output, &game_sound_buffer,
                               write_marker);
@@ -1179,21 +1275,27 @@ int main(void) {
             debug_time_marker.flip_write_cursor = ring_buffer.write_cursor;
             SDL_UnlockAudio();
 
+#if 0
             sdl_debug_sync_display(
                 &backbuffer, &sound_output, array_count(debug_time_markers),
                 debug_time_markers, debug_time_marker_index - 1);
 #endif
+#endif
 
             SDL_RenderClear(backbuffer.renderer);
 
+            // STUDY(fede): use streaming texture and locking functions
             if (SDL_UpdateTexture(backbuffer.texture, 0,
                                   (void *)backbuffer.data,
-                                  backbuffer.pitch) <= 0) {
+                                  backbuffer.pitch) < 0) {
                 // TODO(fede): Update texture failure
             }
 
-            if (SDL_RenderCopy(backbuffer.renderer, backbuffer.texture, 0, 0) <=
-                0) {
+            SDL_Rect dest_rect = {};
+            dest_rect.h = game_buffer.height;
+            dest_rect.w = game_buffer.width;
+            if (SDL_RenderCopy(backbuffer.renderer, backbuffer.texture, 0,
+                               &dest_rect) < 0) {
                 // TODO(fede): Render texture failure
             }
 
