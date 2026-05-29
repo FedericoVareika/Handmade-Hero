@@ -1,6 +1,5 @@
 #pragma once
 
-#include <math.h>
 #include <stdint.h>
 
 /*
@@ -240,15 +239,35 @@ typedef struct {
 #define TILEMAP_WIDTH 17
 #define TILEMAP_HEIGHT 9
 
+#define TILE_SIDE_IN_PIXELS 80
+#define TILE_SIDE_IN_METERS 1.4
+
 typedef struct {
+    // TODO(fede): Pack the tilemap_x+tile_x and tilemap_y+tile_y and pack them 
+    //          into two int32s. 
+    //          
+    //          +-----------+--------+
+    //          |  m_bits   | n bits |
+    //          +-----------+--------+
+    //          | tilemap_x | tile_x | 
+    //          | tilemap_y | tile_y | 
+    //          +-----------+--------+
+    //
+    
+#if 1
     int tilemap_x;
     int tilemap_y;
 
     int tile_x;
     int tile_y;
+#else 
+    int tile_x;
+    int tile_y;
+#endif 
 
-    f32 x;
-    f32 y;
+    // TODO(fede): Convert to math-friendly world units relative to a tile.
+    f32 tile_rel_x;
+    f32 tile_rel_y;
 } CanonicalPosition;
 
 typedef struct {
@@ -260,15 +279,16 @@ typedef struct {
 } RawPosition;
 
 typedef struct {
+    f32 tile_side_in_meters;
+    i32 tile_side_in_pixels;
+    f32 meters_to_pixels;
+
     Tilemap *tilemaps;
     int count_x;
     int count_y;
 
     int tilemap_count_x;
     int tilemap_count_y;
-
-    f32 tile_width;
-    f32 tile_height;
 
     f32 upper_left_x;
     f32 upper_left_y;

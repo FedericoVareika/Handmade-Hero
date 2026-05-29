@@ -12,18 +12,11 @@
     in
     {
       devShells.${system}.default = pkgs.mkShell {
-        # The packages you need available in the shell
         packages = with pkgs; [
           gcc
           SDL2
           SDL2.dev
         ];
-
-        # Optional: Print a message when entering the shell
-        shellHook = ''
-          echo "Handmade Hero Dev Environment Loaded!"
-          echo "Compiler: $(gcc --version | head -n 1)"
-        '';
       };
     };
 }
