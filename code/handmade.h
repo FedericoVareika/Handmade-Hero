@@ -234,16 +234,24 @@ extern GAME_FILL_SOUND_BUFFER(game_fill_sound_buffer);
 
 typedef struct {
     u32 *tiles;
-} Tilemap;
+} TileChunk;
 
-#define TILEMAP_WIDTH 17
-#define TILEMAP_HEIGHT 9
+#define TILEMAP_WIDTH 256
+#define TILEMAP_HEIGHT 256
 
 #define TILE_SIDE_IN_PIXELS 80
 #define TILE_SIDE_IN_METERS 1.4
 
 typedef struct {
-    // TODO(fede): Pack the tilemap_x+tile_x and tilemap_y+tile_y and pack them 
+    u32 tile_chunk_x;
+    u32 tile_chunk_y;
+
+    u32 rel_tile_x;
+    u32 rel_tile_y;
+} TileChunkPosition;
+
+typedef struct {
+    // NOTE(fede): Pack the tilemap_x+tile_x and tilemap_y+tile_y and pack them 
     //          into two int32s. 
     //          
     //          +-----------+--------+
@@ -254,46 +262,33 @@ typedef struct {
     //          +-----------+--------+
     //
     
-#if 1
-    int tilemap_x;
-    int tilemap_y;
+    u32 abs_tile_x;
+    u32 abs_tile_y;
 
-    int tile_x;
-    int tile_y;
-#else 
-    int tile_x;
-    int tile_y;
-#endif 
-
-    // TODO(fede): Convert to math-friendly world units relative to a tile.
     f32 tile_rel_x;
     f32 tile_rel_y;
-} CanonicalPosition;
+} WorldPosition;
 
 typedef struct {
-    int tilemap_x;
-    int tilemap_y;
-
     f32 x;
     f32 y;
 } RawPosition;
 
 typedef struct {
+    u32 chunk_shift;
+    u32 chunk_mask;
+
     f32 tile_side_in_meters;
     i32 tile_side_in_pixels;
     f32 meters_to_pixels;
 
-    Tilemap *tilemaps;
-    int count_x;
-    int count_y;
+    TileChunk *tilechunks;
+    u32 chunk_dim;
 
     int tilemap_count_x;
     int tilemap_count_y;
-
-    f32 upper_left_x;
-    f32 upper_left_y;
 } World;
 
 typedef struct {
-    CanonicalPosition player_pos;
+    WorldPosition player_pos;
 } GameState;
