@@ -4,7 +4,8 @@
 #include <math.h>
 
 inline int round_f32_to_int(f32 a) {
-    return (int)(a + 0.5); 
+    return roundf(a);
+    // return (int)(a + 0.5); 
 }
 
 inline int floor_f32_to_int(f32 a) {

@@ -1,0 +1,6 @@
+-DHANDMADE_SLOW=1
+-DHANDMADE_INTERNAL=1
+-ffile-prefix-map=old=new
+-g
+-W
+-Og

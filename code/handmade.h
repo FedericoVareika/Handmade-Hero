@@ -1,6 +1,8 @@
-#pragma once
+#ifndef HANDMADE_H
+#define HANDMADE_H
 
 #include <stdint.h>
+#include <stdio.h> // NOTE(fede): for size_t type
 
 /*
  * NOTE(fede):
@@ -65,8 +67,11 @@ typedef int16_t i16;
 typedef int32_t i32;
 typedef int64_t i64;
 
+typedef size_t MemoryIndex; 
+
 typedef float f32;
 typedef double f64;
+
 
 typedef enum { false, true } bool;
 
@@ -201,10 +206,10 @@ internal inline GameControllerInput *get_game_controller(GameInput *input,
 typedef struct {
     bool is_initialized;
 
-    u64 permanent_storage_size;
+    MemoryIndex permanent_storage_size;
     void *permanent_storage;
 
-    u64 transient_storage_size;
+    MemoryIndex transient_storage_size;
     void *transient_storage;
 
 #if HANDMADE_INTERNAL
@@ -229,66 +234,18 @@ typedef GAME_FILL_SOUND_BUFFER(GameFillSoundBuffer);
 
 extern GAME_FILL_SOUND_BUFFER(game_fill_sound_buffer);
 
-// TODO(fede): the platform layer should not know about the game state, move
-//             this definition to another location
+#include "handmade_intrinsics.h" 
+#include "handmade_tile.h" 
+#include "handmade_arena.h" 
 
 typedef struct {
-    u32 *tiles;
-} TileChunk;
-
-#define TILEMAP_WIDTH 256
-#define TILEMAP_HEIGHT 256
-
-#define TILE_SIDE_IN_PIXELS 80
-#define TILE_SIDE_IN_METERS 1.4
-
-typedef struct {
-    u32 tile_chunk_x;
-    u32 tile_chunk_y;
-
-    u32 rel_tile_x;
-    u32 rel_tile_y;
-} TileChunkPosition;
-
-typedef struct {
-    // NOTE(fede): Pack the tilemap_x+tile_x and tilemap_y+tile_y and pack them 
-    //          into two int32s. 
-    //          
-    //          +-----------+--------+
-    //          |  m_bits   | n bits |
-    //          +-----------+--------+
-    //          | tilemap_x | tile_x | 
-    //          | tilemap_y | tile_y | 
-    //          +-----------+--------+
-    //
-    
-    u32 abs_tile_x;
-    u32 abs_tile_y;
-
-    f32 tile_rel_x;
-    f32 tile_rel_y;
-} WorldPosition;
-
-typedef struct {
-    f32 x;
-    f32 y;
-} RawPosition;
-
-typedef struct {
-    u32 chunk_shift;
-    u32 chunk_mask;
-
-    f32 tile_side_in_meters;
-    i32 tile_side_in_pixels;
-    f32 meters_to_pixels;
-
-    TileChunk *tilechunks;
-    u32 chunk_dim;
-
-    int tilemap_count_x;
-    int tilemap_count_y;
+    Tilemap *tilemap;
 } World;
 
 typedef struct {
-    WorldPosition player_pos;
+    Arena world_arena;
+    World *world;
+    TilemapPosition player_pos;
 } GameState;
+
+#endif //HANDMADE_H

@@ -1000,8 +1000,9 @@ int main(void) {
      */
 
     int refresh_rate = mode.refresh_rate;
+    refresh_rate = 30;
 
-    int game_update_rate = refresh_rate / 2;
+    int game_update_rate = refresh_rate;
     f32 target_seconds_per_frame = 1.0f / (f32)game_update_rate;
 
     SDLControllers controllers = {};

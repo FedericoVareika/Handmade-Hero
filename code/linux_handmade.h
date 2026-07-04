@@ -1,4 +1,5 @@
-#pragma once
+#ifndef LINUX_HANDMADE_H
+#define LINUX_HANDMADE_H
 
 #include <fcntl.h>
 
@@ -72,6 +73,7 @@ typedef struct {
     int target_cursor;
 } SDLDebugTimeMarker;
 
+#include <limits.h>
 #define LINUX_FILEPATH_MAX_COUNT PATH_MAX
 
 typedef struct {
@@ -92,3 +94,5 @@ typedef struct {
     char exe_filename[LINUX_FILEPATH_MAX_COUNT];
     char *one_past_last_slash;
 } LinuxState;
+
+#endif //LINUX_HANDMADE_H
