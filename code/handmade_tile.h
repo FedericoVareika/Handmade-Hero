@@ -1,5 +1,5 @@
-#ifndef HANDMADE_TILE
-#define HANDMADE_TILE
+#ifndef HANDMADE_TILE_H
+#define HANDMADE_TILE_H
 
 #define TILEMAP_WIDTH 256
 #define TILEMAP_HEIGHT 256
@@ -53,7 +53,4 @@ typedef struct {
     f32 tile_rel_y;
 } TilemapPosition;
 
-
-#endif //HANDMADE_TILE
-
-
+#endif // HANDMADE_TILE_H

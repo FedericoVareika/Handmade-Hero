@@ -59,16 +59,6 @@ internal void draw_rectangle(GameDisplayBuffer *buffer, f32 real_min_x,
 
 #if HANDMADE_INTERNAL
 
-internal u32 get_bitshift_from_mask(u32 mask) {
-    u32 bitshift = 0;
-    while ((mask & 1) == 0) {
-        mask = mask >> 1;
-        bitshift++;
-    }
-
-    return bitshift;
-}
-
 typedef struct __attribute__((packed)) {
     u16 filetype;
     u32 filesize;
@@ -127,19 +117,24 @@ internal LoadedBitmap debug_load_bmp(
         (BmpBitfieldsMasks *)(((u8 *)file.memory) + sizeof(BmpHeader));
 
     u32 *pixel = result.pixels;
-    u32 r_bitshift = get_bitshift_from_mask(masks->r);
-    u32 b_bitshift = get_bitshift_from_mask(masks->b);
-    u32 g_bitshift = get_bitshift_from_mask(masks->g);
-    u32 a_bitshift = get_bitshift_from_mask(masks->a);
+    FindBitResult r_bitshift = find_least_significant_set_bit(masks->r);
+    FindBitResult b_bitshift = find_least_significant_set_bit(masks->b);
+    FindBitResult g_bitshift = find_least_significant_set_bit(masks->g);
+    FindBitResult a_bitshift = find_least_significant_set_bit(masks->a);
+
+    assert(r_bitshift.found); 
+    assert(b_bitshift.found); 
+    assert(g_bitshift.found); 
+    assert(a_bitshift.found); 
 
     for (int y = 0; y < header->dib_header.bitmap_pixel_height; y++) {
         for (int x = 0; x < header->dib_header.bitmap_pixel_width; x++) {
             u32 pixel_encoded = *pixel;
             u32 pixel_argb = 
-                ((pixel_encoded & masks->a) >> a_bitshift) << 24 |
-                ((pixel_encoded & masks->r) >> r_bitshift) << 16 |
-                ((pixel_encoded & masks->g) >> g_bitshift) << 8 |
-                ((pixel_encoded & masks->b) >> b_bitshift) << 0;
+                ((pixel_encoded >> a_bitshift.index) & 0xFF) << 24 |
+                ((pixel_encoded >> r_bitshift.index) & 0xFF) << 16 |
+                ((pixel_encoded >> g_bitshift.index) & 0xFF) << 8  |
+                ((pixel_encoded >> b_bitshift.index) & 0xFF) << 0;
             *(pixel++) = pixel_argb;
         }
     }
@@ -147,32 +142,40 @@ internal LoadedBitmap debug_load_bmp(
     return result;
 }
 
-internal u32 multiply_channels_rgb(u32 argb, f32 k) {
-    u32 r = (argb & 0xFF0000) >> 16;
-    r = (u32)(r * k) & 0xFF;
-
-    u32 g = (argb & 0x00FF00) >> 8;
-    g = (u32)(g * k) & 0xFF;
-
-    u32 b = (argb & 0x0000FF) >> 0;
-    b = (u32)(b * k) & 0xFF;
-
-    return argb & 0xFF000000 | 
-        r << 16 | g << 8 | b; 
-} 
+internal inline f32 lerp(f32 a, f32 b, f32 t) {
+    return a * (1-t) + b * t;
+}
 
 internal void debug_draw_pixel(u32 *pixel, u32 value) {
     u32 alpha = value >> 24; 
 
-    // NOTE(fede): blending
+    // NOTE(fede): linear blending
     //      source * alpha + dest * (1 - alpha) 
 
-    f32 alpha_fraction = ((f32)alpha) / (f32)0xFF;
-    u32 multiplied_value = multiply_channels_rgb(value, alpha_fraction);
-    u32 multiplied_pixel = multiply_channels_rgb(*pixel, 1 - alpha_fraction);
-    // TODO(fede): test whether there is color bleeding 
-    // (channel exceedes 0xFF)
-    u32 blended = multiplied_value + multiplied_pixel; 
+    f32 t =  ((value >> 24) & 0xFF) / (f32)0xFF;
+    f32 sr = ((value >> 16) & 0xFF);
+    f32 sg = ((value >>  8) & 0xFF);
+    f32 sb = ((value >>  0) & 0xFF);
+
+    f32 dr = ((*pixel >> 16) & 0xFF);
+    f32 dg = ((*pixel >>  8) & 0xFF);
+    f32 db = ((*pixel >>  0) & 0xFF);
+
+    f32 r = lerp(dr, sr, t);
+    f32 g = lerp(dg, sg, t);
+    f32 b = lerp(db, sb, t);
+
+    u32 blended = 
+        (value & 0xFF000000) | 
+        ((u32)r & 0xFF) << 16 | 
+        ((u32)g & 0xFF) <<  8 | 
+        ((u32)b & 0xFF) <<  0; 
+
+    // u32 multiplied_value = multiply_channels_rgb(value, alpha_fraction);
+    // u32 multiplied_pixel = multiply_channels_rgb(*pixel, 1 - alpha_fraction);
+    // // TODO(fede): test whether there is color bleeding 
+    // // (channel exceedes 0xFF)
+    // u32 blended = multiplied_value + multiplied_pixel; 
 
     *pixel = blended;
 }
@@ -229,34 +232,41 @@ extern GAME_UPDATE_AND_RENDER(game_update_and_render) {
     u32 tiles_per_width = 17;
 
     if (!memory->is_initialized) {
-        game_state->backdrop = debug_load_bmp(
-                (ThreadContext *)0,
-                memory->debug_platform_read_entire_file,
-                "data/test/test_background.bmp");
-
-        game_state->hero_head = debug_load_bmp(
-                (ThreadContext *)0,
-                memory->debug_platform_read_entire_file,
-                "data/test/test_hero_back_head.bmp");
-
-        game_state->hero_cape = debug_load_bmp(
-                (ThreadContext *)0,
-                memory->debug_platform_read_entire_file,
-                "data/test/test_hero_back_cape.bmp");
-
-        game_state->hero_torso = debug_load_bmp(
-                (ThreadContext *)0,
-                memory->debug_platform_read_entire_file,
-                "data/test/test_hero_back_torso.bmp");
-
-        game_state->hero_shadow = debug_load_bmp(
-                (ThreadContext *)0,
-                memory->debug_platform_read_entire_file,
-                "data/test/test_hero_shadow.bmp");
-
         assert(&input->controllers[0]._end -
                 &input->controllers[0].buttons[0] ==
                 array_count(input->controllers[0].buttons));
+
+        assert(&input->mouse_input._end -
+                &input->mouse_input.buttons[0] ==
+                array_count(input->mouse_input.buttons));
+
+        // NOTE(fede): load bmp's
+        {
+            game_state->backdrop = debug_load_bmp(
+                    (ThreadContext *)0,
+                    memory->debug_platform_read_entire_file,
+                    "data/test/test_background.bmp");
+
+            game_state->hero_head = debug_load_bmp(
+                    (ThreadContext *)0,
+                    memory->debug_platform_read_entire_file,
+                    "data/test/test_hero_back_head.bmp");
+
+            game_state->hero_cape = debug_load_bmp(
+                    (ThreadContext *)0,
+                    memory->debug_platform_read_entire_file,
+                    "data/test/test_hero_back_cape.bmp");
+
+            game_state->hero_torso = debug_load_bmp(
+                    (ThreadContext *)0,
+                    memory->debug_platform_read_entire_file,
+                    "data/test/test_hero_back_torso.bmp");
+
+            game_state->hero_shadow = debug_load_bmp(
+                    (ThreadContext *)0,
+                    memory->debug_platform_read_entire_file,
+                    "data/test/test_hero_shadow.bmp");
+        }
 
         game_state->player_pos = (TilemapPosition){
             .abs_tile_x = 3,
@@ -427,7 +437,7 @@ extern GAME_UPDATE_AND_RENDER(game_update_and_render) {
             continue;
 
         if (controller->button_a.ended_down) 
-            player_velocity *= 10;
+            player_velocity *= 5;
 
         if (controller->is_analog) {
             player_dx += (int)(controller->avg_stick_x * 4.0f);

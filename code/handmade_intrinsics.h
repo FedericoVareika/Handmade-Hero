@@ -1,5 +1,5 @@
-#ifndef HANDMADE_INTRINSICS 
-#define HANDMADE_INTRINSICS 
+#ifndef HANDMADE_INTRINSICS_H
+#define HANDMADE_INTRINSICS_H
 
 #include <math.h>
 
@@ -29,4 +29,42 @@ internal inline f32 atan2_f32(f32 y, f32 x) {
     return atan2f(y, x);
 } 
 
-#endif //HANDMADE_INTRINSICS
+typedef struct {
+    u32 index;
+    bool found;
+} FindBitResult; 
+
+internal inline FindBitResult find_least_significant_set_bit(u32 mask) {
+    FindBitResult result = {};
+
+#if defined(COMPILER_GCC)
+    if (mask != 0) {
+        result.index = __builtin_ctzll(mask);
+        result.found = true;
+    }
+#elif defined(COMPILER_CLANG)
+    // TODO(fede): do not know the clang intrinsic for this yet.
+    while (result.index < 32) {
+        if ((mask & (0x1 << result.index)) != 0) {
+            result.found = true;
+            return result;
+        }
+
+        result.index++;
+    }
+#else
+    while (result.index < 32) {
+        if ((mask & (0x1 << result.index)) != 0) {
+            result.found = true;
+            return result;
+        }
+
+        result.index++;
+    }
+#endif 
+
+    return result;
+}
+
+#endif //HANDMADE_INTRINSICS_H
+       
