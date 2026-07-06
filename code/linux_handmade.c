@@ -503,6 +503,26 @@ internal bool sdl_handle_event(SDL_Event *event, SDLBackbuffer *backbuffer,
                                     key_event.type == SDL_KEYDOWN);
         } break;
 
+        case SDLK_SPACE: {
+            sdl_handle_keyboard_key(&keyboard_controller->button_a,
+                                    key_event.type == SDL_KEYDOWN);
+        } break;
+
+        case SDLK_f: {
+            sdl_handle_keyboard_key(&keyboard_controller->button_x,
+                                    key_event.type == SDL_KEYDOWN);
+        } break;
+
+        case SDLK_r: {
+            sdl_handle_keyboard_key(&keyboard_controller->button_b,
+                                    key_event.type == SDL_KEYDOWN);
+        } break;
+
+        case SDLK_g: {
+            sdl_handle_keyboard_key(&keyboard_controller->button_y,
+                                    key_event.type == SDL_KEYDOWN);
+        } break;
+
         case SDLK_RETURN: {
             global_game_running = false;
         } break;
@@ -858,8 +878,8 @@ internal GameLib linux_load_gamelib(char *filename) {
 }
 
 internal void linux_reload_gamelib(GameLib *game, char *filename) {
-    // TODO(fede): checking valid handle, etc.
-    dlclose(game->handle);
+    if (game->is_valid)
+        dlclose(game->handle);
     game->handle = dlopen(filename, RTLD_NOW);
 
     if (game->handle) {
@@ -959,8 +979,10 @@ int main(void) {
 
     performance_frequency = SDL_GetPerformanceFrequency();
 
-    u32 width = 1280;
-    u32 height = 720;
+    // NOTE(fede): 1080p is 1920x1080. 
+    //      Dividing by 2: 960x540. This is what we are using. 
+    u32 width = 960;
+    u32 height = 540;
     SDL_Window *window = SDL_CreateWindow(
         "Handmade Hero", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED,
         width, height, SDL_WINDOW_RESIZABLE);

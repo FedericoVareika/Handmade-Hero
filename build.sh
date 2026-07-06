@@ -1,6 +1,6 @@
 #!/bin/sh
 
-common_flags_internal="-DHANDMADE_SLOW=1 -DHANDMADE_INTERNAL=1 -ffile-prefix-map=old=new -g -W -Og"
+common_flags_internal="-DHANDMADE_SLOW=1 -DHANDMADE_INTERNAL=1 -ffile-prefix-map=old=new -g -W"
 common_flags_external="-DHANDMADE_SLOW=0 -DHANDMADE_INTERNAL=0 -ffile-prefix-map=old=new -g -W -O3"
 
 linker_flags="$(sdl2-config --cflags --libs) -lm -ldl"

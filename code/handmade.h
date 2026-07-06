@@ -4,6 +4,8 @@
 #include <stdint.h>
 #include <stdio.h> // NOTE(fede): for size_t type
 
+// TODO(fede): fix screen tearing issues
+
 /*
  * NOTE(fede):
  *
@@ -140,8 +142,6 @@ typedef struct {
     f32 avg_stick_x;
     f32 avg_stick_y;
 
-    // TODO(fede): make an assert that checks the length of buttons coincides
-    //             with the amount of named buttons.
     union {
         GameButton buttons[10];
         struct {
@@ -243,9 +243,21 @@ typedef struct {
 } World;
 
 typedef struct {
+    i32 width;
+    i32 height;
+    u32 *pixels;
+} LoadedBitmap;
+
+typedef struct {
     Arena world_arena;
     World *world;
     TilemapPosition player_pos;
+
+    LoadedBitmap backdrop;
+    LoadedBitmap hero_head;
+    LoadedBitmap hero_cape;
+    LoadedBitmap hero_torso;
+    LoadedBitmap hero_shadow;
 } GameState;
 
 #endif //HANDMADE_H

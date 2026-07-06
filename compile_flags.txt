@@ -3,4 +3,3 @@
 -ffile-prefix-map=old=new
 -g
 -W
--Og
