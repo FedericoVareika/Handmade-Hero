@@ -196,7 +196,7 @@ internal void debug_draw_bmp(
     max_x = min((int)buffer->width, max_x);
     max_y = min((int)buffer->height, max_y);
 
-    i32 bitmap_y = bitmap->height - bitmap_offset_y;
+    i32 bitmap_y = bitmap->height - 1 - bitmap_offset_y;
     for (int y = min_y; y < max_y; y++) {
         i32 bitmap_x = bitmap_offset_x;
         for (int x = min_x; x < max_x; x++) {
