@@ -1284,7 +1284,7 @@ int main(void) {
 
         last_counter = SDL_GetPerformanceCounter();
 
-#if 1
+#if 0
         f64 ms_per_frame = seconds_elapsed_for_frame * 1000;
         f64 fps = 1000.0f / ms_per_frame;
 
