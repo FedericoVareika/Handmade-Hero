@@ -78,14 +78,24 @@ typedef struct {
 } LoadedBitmap;
 
 typedef struct {
+    LoadedBitmap head;
+    LoadedBitmap cape;
+    LoadedBitmap torso;
+    u32 align_x;
+    u32 align_y;
+} HeroBitmaps;
+
+typedef struct {
     Arena world_arena;
     World *world;
+
     TilemapPosition player_pos;
+    TilemapPosition camera_pos;
 
     LoadedBitmap backdrop;
-    LoadedBitmap hero_head;
-    LoadedBitmap hero_cape;
-    LoadedBitmap hero_torso;
+
+    u32 hero_facing_direction;
+    HeroBitmaps hero_bitmaps[4];
     LoadedBitmap hero_shadow;
 } GameState;
 

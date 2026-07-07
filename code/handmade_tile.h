@@ -53,4 +53,8 @@ typedef struct {
     f32 tile_rel_y;
 } TilemapPosition;
 
+typedef struct {
+    f32 dx, dy, dz;
+} TilemapDifference;
+
 #endif // HANDMADE_TILE_H

@@ -187,3 +187,46 @@ internal bool are_on_same_tile(
            pos_a.abs_tile_y == pos_b.abs_tile_y &&
            pos_a.abs_tile_z == pos_b.abs_tile_z;
 } 
+
+internal bool are_on_same_room(
+        u32 room_width, u32 room_height,
+        TilemapPosition pos_a,
+        TilemapPosition pos_b) {
+    return pos_a.abs_tile_x / room_width == pos_b.abs_tile_x / room_width &&
+           pos_a.abs_tile_y / room_height == pos_b.abs_tile_y / room_height &&
+           pos_a.abs_tile_z == pos_b.abs_tile_z;
+} 
+
+internal TilemapPosition get_room_center(
+        u32 room_width, u32 room_height,
+        TilemapPosition position_in_room) {
+    u32 room_x = position_in_room.abs_tile_x / room_width;
+    u32 room_y = position_in_room.abs_tile_y / room_height;
+    return (TilemapPosition){
+        .abs_tile_x = room_x * room_width + room_width / 2,
+        .abs_tile_y = room_y * room_height + room_height / 2,
+        .abs_tile_z = position_in_room.abs_tile_z,
+    };
+}
+
+internal TilemapDifference subtract_tilemap_positions(
+        f32 tile_side_in_meters, 
+        TilemapPosition pos_a, 
+        TilemapPosition pos_b) {
+
+    f32 dx = (f32)pos_a.abs_tile_x - (f32)pos_b.abs_tile_x;
+    f32 dy = (f32)pos_a.abs_tile_y - (f32)pos_b.abs_tile_y;
+    f32 dz = (f32)pos_a.abs_tile_z - (f32)pos_b.abs_tile_z;
+
+    dx *= tile_side_in_meters;
+    dy *= tile_side_in_meters;
+
+    dx += pos_a.tile_rel_x - pos_b.tile_rel_x;
+    dy += pos_a.tile_rel_y - pos_b.tile_rel_y;
+
+    return (TilemapDifference){
+        .dx = dx,
+        .dy = dy,
+        .dz = dz,
+    };
+}

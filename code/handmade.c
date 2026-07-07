@@ -212,15 +212,8 @@ internal void debug_draw_bmp(
     }
 }
 
-internal void debug_draw_bmp_centered_on_point(
-        LoadedBitmap *bitmap,
-        GameDisplayBuffer *display_buffer,
-        f32 center_x,
-        f32 center_y) {
-    f32 top_left_x = center_x - (bitmap->width / 2);
-    f32 top_left_y = center_y - (bitmap->height / 2);
-    debug_draw_bmp(bitmap, display_buffer, top_left_x, top_left_y);
-}
+#define debug_draw_bmp_align(bitmap, buffer, top_left_x, top_left_y, align_x, align_y)  \
+    debug_draw_bmp(bitmap, buffer, top_left_x - (f32)align_x, top_left_y - (f32)align_y)
 
 #endif 
 
@@ -247,23 +240,63 @@ extern GAME_UPDATE_AND_RENDER(game_update_and_render) {
                     memory->debug_platform_read_entire_file,
                     "data/test/test_background.bmp");
 
-            game_state->hero_head = debug_load_bmp(
-                    (ThreadContext *)0,
-                    memory->debug_platform_read_entire_file,
-                    "data/test/test_hero_back_head.bmp");
+            {
+                HeroBitmaps *bitmaps = game_state->hero_bitmaps;
 
-            game_state->hero_cape = debug_load_bmp(
-                    (ThreadContext *)0,
-                    memory->debug_platform_read_entire_file,
-                    "data/test/test_hero_back_cape.bmp");
+                bitmaps->head = debug_load_bmp(0,
+                        memory->debug_platform_read_entire_file,
+                        "data/test/test_hero_front_head.bmp");
+                bitmaps->cape = debug_load_bmp(0,
+                        memory->debug_platform_read_entire_file,
+                        "data/test/test_hero_front_cape.bmp");
+                bitmaps->torso = debug_load_bmp(0,
+                        memory->debug_platform_read_entire_file,
+                        "data/test/test_hero_front_torso.bmp");
+                bitmaps->align_x = 72;
+                bitmaps->align_y = 182;
+                bitmaps++;
 
-            game_state->hero_torso = debug_load_bmp(
-                    (ThreadContext *)0,
-                    memory->debug_platform_read_entire_file,
-                    "data/test/test_hero_back_torso.bmp");
+                bitmaps->head = debug_load_bmp(0,
+                        memory->debug_platform_read_entire_file,
+                        "data/test/test_hero_back_head.bmp");
+                bitmaps->cape = debug_load_bmp(0,
+                        memory->debug_platform_read_entire_file,
+                        "data/test/test_hero_back_cape.bmp");
+                bitmaps->torso = debug_load_bmp(0,
+                        memory->debug_platform_read_entire_file,
+                        "data/test/test_hero_back_torso.bmp");
+                bitmaps->align_x = 72;
+                bitmaps->align_y = 182;
+                bitmaps++;
 
-            game_state->hero_shadow = debug_load_bmp(
-                    (ThreadContext *)0,
+                bitmaps->head = debug_load_bmp(0,
+                        memory->debug_platform_read_entire_file,
+                        "data/test/test_hero_left_head.bmp");
+                bitmaps->cape = debug_load_bmp(0,
+                        memory->debug_platform_read_entire_file,
+                        "data/test/test_hero_left_cape.bmp");
+                bitmaps->torso = debug_load_bmp(0,
+                        memory->debug_platform_read_entire_file,
+                        "data/test/test_hero_left_torso.bmp");
+                bitmaps->align_x = 72;
+                bitmaps->align_y = 182;
+                bitmaps++;
+
+                bitmaps->head = debug_load_bmp(0,
+                        memory->debug_platform_read_entire_file,
+                        "data/test/test_hero_right_head.bmp");
+                bitmaps->cape = debug_load_bmp(0,
+                        memory->debug_platform_read_entire_file,
+                        "data/test/test_hero_right_cape.bmp");
+                bitmaps->torso = debug_load_bmp(0,
+                        memory->debug_platform_read_entire_file,
+                        "data/test/test_hero_right_torso.bmp");
+                bitmaps->align_x = 70;
+                bitmaps->align_y = 182;
+                bitmaps++;
+            }
+
+            game_state->hero_shadow = debug_load_bmp(0,
                     memory->debug_platform_read_entire_file,
                     "data/test/test_hero_shadow.bmp");
         }
@@ -275,6 +308,11 @@ extern GAME_UPDATE_AND_RENDER(game_update_and_render) {
             .tile_rel_x = 0,
             .tile_rel_y = 0,
         };
+
+        game_state->camera_pos = get_room_center(
+                tiles_per_width,
+                tiles_per_height,
+                game_state->player_pos);
 
         initialize_arena(
                 &game_state->world_arena,
@@ -445,18 +483,22 @@ extern GAME_UPDATE_AND_RENDER(game_update_and_render) {
         } else {
             if (controller->move_up.ended_down) {
                 player_dy += 1; 
+                game_state->hero_facing_direction = 1;
             }
 
             if (controller->move_left.ended_down) {
                 player_dx -= 1;
+                game_state->hero_facing_direction = 2;
             }
 
             if (controller->move_down.ended_down) {
                 player_dy -= 1;
+                game_state->hero_facing_direction = 0;
             }
 
             if (controller->move_right.ended_down) {
                 player_dx += 1;
+                game_state->hero_facing_direction = 3;
             }
 
             player_dx *= player_velocity * input->dt_for_frame;
@@ -486,15 +528,27 @@ extern GAME_UPDATE_AND_RENDER(game_update_and_render) {
             is_tilemap_point_empty(tilemap, new_player_right)) {
             if (!are_on_same_tile(new_player_pos, game_state->player_pos)) {
                 u32 tile_val = get_tile_value_at_pos(tilemap, new_player_pos);
-                if (tile_val == 3)
+                if (tile_val == 3) {
                     new_player_pos.abs_tile_z++;
-                else if (tile_val == 4)
+                    game_state->camera_pos.abs_tile_z++;
+                } else if (tile_val == 4) {
                     new_player_pos.abs_tile_z--;
+                    game_state->camera_pos.abs_tile_z--;
+                }
+            }
+
+            if (!are_on_same_room(
+                        tiles_per_width,
+                        tiles_per_height,
+                        new_player_pos, game_state->player_pos)) {
+                game_state->camera_pos = get_room_center(
+                        tiles_per_width,
+                        tiles_per_height,
+                        new_player_pos);
             }
 
             game_state->player_pos = new_player_pos;
         }
-
     }
 
 #if HANDMADE_INTERNAL
@@ -510,9 +564,10 @@ extern GAME_UPDATE_AND_RENDER(game_update_and_render) {
     f32 lower_left_x = -tile_side_in_pixels / 2;
     f32 lower_left_y = display_buffer->height;
 
+    f32 screen_center_x = display_buffer->width / 2;
+    f32 screen_center_y = display_buffer->height / 2;
+
     {
-        f32 screen_center_x = display_buffer->width / 2;
-        f32 screen_center_y = display_buffer->height / 2;
 
         for (i32 rel_row = -10; rel_row < 10; rel_row++) {
             for (i32 rel_col = -10; rel_col < 10; rel_col++) {
@@ -527,9 +582,9 @@ extern GAME_UPDATE_AND_RENDER(game_update_and_render) {
 
                     u32 tile_value = get_tile_value(
                             tilemap,
-                            rel_col + game_state->player_pos.abs_tile_x,
-                            rel_row + game_state->player_pos.abs_tile_y,
-                            game_state->player_pos.abs_tile_z);
+                            rel_col + game_state->camera_pos.abs_tile_x,
+                            rel_row + game_state->camera_pos.abs_tile_y,
+                            game_state->camera_pos.abs_tile_z);
 
                     f32 player_inside = rel_col == 0 && rel_row == 0 ? 0.3 : 0; 
                     if (tile_value == 3 || tile_value == 4) {
@@ -564,8 +619,8 @@ extern GAME_UPDATE_AND_RENDER(game_update_and_render) {
                     center_x += rel_col * tile_side_in_pixels;
                     center_y -= rel_row * tile_side_in_pixels;
 
-                    center_x -= meters_to_pixels * game_state->player_pos.tile_rel_x;
-                    center_y += meters_to_pixels * game_state->player_pos.tile_rel_y;
+                    center_x -= meters_to_pixels * game_state->camera_pos.tile_rel_x;
+                    center_y += meters_to_pixels * game_state->camera_pos.tile_rel_y;
 
                     min_x = center_x - tile_side_in_pixels * 0.5;
                     min_y = center_y + tile_side_in_pixels * 0.5;
@@ -582,17 +637,54 @@ extern GAME_UPDATE_AND_RENDER(game_update_and_render) {
 
     // NOTE(fede): Draw player.
     {
-        f32 player_x = lower_left_x + meters_to_pixels * (
-                game_state->player_pos.abs_tile_x * tilemap->tile_side_in_meters +
-                game_state->player_pos.tile_rel_x);
+        TilemapDifference player_camera_space = subtract_tilemap_positions(
+                tilemap->tile_side_in_meters,
+                game_state->player_pos,
+                game_state->camera_pos); 
+        f32 player_x_screen = player_camera_space.dx * meters_to_pixels + screen_center_x; 
+        f32 player_y_screen = player_camera_space.dy * -meters_to_pixels + screen_center_y; 
 
-        f32 player_y = lower_left_y - meters_to_pixels * (
-                game_state->player_pos.abs_tile_y * tilemap->tile_side_in_meters +
-                game_state->player_pos.tile_rel_y);
+#if HANDMADE_INTERNAL
+        // NOTE(fede): draw player
+        {
+            u32 facing_direction = game_state->hero_facing_direction;
+            HeroBitmaps hero_bitmaps = game_state->hero_bitmaps[facing_direction];
 
-        player_x = display_buffer->width / 2;
-        player_y = display_buffer->height / 2;
+            u32 align_x = hero_bitmaps.align_x;
+            u32 align_y = hero_bitmaps.align_y;
 
+            debug_draw_bmp_align(
+                    &game_state->hero_shadow,
+                    display_buffer,
+                    player_x_screen, player_y_screen, align_x, align_y);
+
+            debug_draw_bmp_align(
+                    &hero_bitmaps.torso,
+                    display_buffer,
+                    player_x_screen, player_y_screen, align_x, align_y);
+
+            debug_draw_bmp_align(
+                    &hero_bitmaps.cape,
+                    display_buffer,
+                    player_x_screen, player_y_screen, align_x, align_y);
+
+            debug_draw_bmp_align(
+                    &hero_bitmaps.head,
+                    display_buffer,
+                    player_x_screen, player_y_screen, align_x, align_y);
+        }
+
+        // NOTE(fede): draw player ground point
+        {
+            draw_rectangle(display_buffer,
+                    player_x_screen - 2,
+                    player_y_screen - 2,
+                    player_x_screen + 2,
+                    player_y_screen + 2,
+                    1, 0, 0);
+        }
+
+#else 
         f32 player_pixel_width = player_width * meters_to_pixels; 
         f32 player_pixel_height = player_height * meters_to_pixels; 
 
@@ -602,29 +694,6 @@ extern GAME_UPDATE_AND_RENDER(game_update_and_render) {
         f32 player_right = player_x + player_pixel_width / 2;
         f32 player_top = player_y - player_pixel_height;
 
-#if HANDMADE_INTERNAL
-        f32 bitmap_y = player_y - 73;
-        debug_draw_bmp_centered_on_point(
-                &game_state->hero_shadow,
-                display_buffer,
-                player_x, bitmap_y);
-
-        debug_draw_bmp_centered_on_point(
-                &game_state->hero_torso,
-                display_buffer,
-                player_x, bitmap_y);
-
-        debug_draw_bmp_centered_on_point(
-                &game_state->hero_cape,
-                display_buffer,
-                player_x, bitmap_y);
-
-        debug_draw_bmp_centered_on_point(
-                &game_state->hero_head,
-                display_buffer,
-                player_x, bitmap_y);
-
-#else 
         draw_rectangle(display_buffer,
                 player_left,
                 player_top,
