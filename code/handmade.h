@@ -39,11 +39,6 @@
 
 #endif
 
-
-#define internal static
-#define global static
-#define local_persist static
-
 #define PI 3.14159265359f
 
 #define kilobytes(value) ((value) * 1024)

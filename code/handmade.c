@@ -4,29 +4,12 @@
 #include "handmade_tile.c" 
 
 internal void fill_audio_buffer(GameSoundOutputBuffer *buffer, int tone_hz) {
-    static f32 t_sine = 0;
-    const u32 tone_volume = 3000;
-    u32 wave_period = buffer->samples_per_second / tone_hz;
-
     i16 *sample_out = buffer->samples;
     for (u32 i = 0; i < buffer->sample_count; i++) {
-        f32 sine_value = sin_f32(t_sine);
-
-#if 0
-        i16 sample_value = (i16)(sine_value * tone_volume);
-#else
         i16 sample_value = 0;
-#endif
-
         *sample_out++ = sample_value;
         *sample_out++ = sample_value;
-
-        t_sine += 2.0f * PI * 1.0f / (f32)wave_period;
     }
-
-    int q = truncate_f32_to_int(t_sine / (2.0f * PI));
-    f32 t_sine_whole_part = 2.0f * PI * (f32)q;
-    t_sine = t_sine - t_sine_whole_part;
 }
 
 internal void draw_rectangle(GameDisplayBuffer *buffer, f32 real_min_x,

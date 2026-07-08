@@ -15,7 +15,9 @@
 #include <stdint.h>
 #include <stdio.h> // NOTE(fede): for size_t type
 
-// TODO(fede): fix screen tearing issues
+#define internal static
+#define global static
+#define local_persist static
 
 typedef uint8_t u8;
 typedef uint16_t u16;
@@ -31,7 +33,6 @@ typedef size_t MemoryIndex;
 
 typedef float f32;
 typedef double f64;
-
 
 typedef enum { false, true } bool;
 
@@ -86,7 +87,6 @@ typedef struct {
     int tone_hz;
     int tone_volume;
     int wave_period;
-    f32 t_sine;
 } GameSoundOutput;
 
 typedef struct {

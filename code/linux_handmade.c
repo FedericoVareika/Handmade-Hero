@@ -1317,6 +1317,9 @@ int main(void) {
             SDL_Rect dest_rect = {};
             dest_rect.h = game_buffer.height;
             dest_rect.w = game_buffer.width;
+
+            // NOTE(fede): if we want hacky fullscreen, change &dest_rect -> 0. 
+            //      It stretches the texture to the entire screen.
             if (SDL_RenderCopy(backbuffer.renderer, backbuffer.texture, 0,
                                &dest_rect) < 0) {
                 // TODO(fede): Render texture failure
