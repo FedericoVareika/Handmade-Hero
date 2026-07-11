@@ -1196,6 +1196,12 @@ int main(void) {
                 sdl_handle_button(&old_controller_state->right_shoulder,
                                   GET_BUTTON(controller_handle, RIGHTSHOULDER),
                                   &new_controller_state->right_shoulder);
+                sdl_handle_button(&old_controller_state->right_shoulder,
+                                  GET_BUTTON(controller_handle, BACK),
+                                  &new_controller_state->back);
+                sdl_handle_button(&old_controller_state->right_shoulder,
+                                  GET_BUTTON(controller_handle, START),
+                                  &new_controller_state->start);
 
                 i16 left_stick_y = GET_AXIS(controller_handle, LEFTY);
                 i16 left_stick_x = GET_AXIS(controller_handle, LEFTX);

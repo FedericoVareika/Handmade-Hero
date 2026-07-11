@@ -52,6 +52,7 @@ typedef struct {
     v2 offset;
 } TilemapPosition;
 
+// TODO(fede): replace with v3
 typedef struct {
     v2 dxy;
     f32 dz;

@@ -101,7 +101,7 @@ typedef struct {
     f32 avg_stick_y;
 
     union {
-        GameButton buttons[10];
+        GameButton buttons[12];
         struct {
             GameButton move_up;
             GameButton move_down;
@@ -115,6 +115,9 @@ typedef struct {
 
             GameButton left_shoulder;
             GameButton right_shoulder;
+
+            GameButton back;
+            GameButton start;
 
             GameButton _end;
         };

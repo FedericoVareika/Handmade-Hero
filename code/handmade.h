@@ -82,12 +82,22 @@ typedef struct {
 } HeroBitmaps;
 
 typedef struct {
+    bool exists;
+    TilemapPosition p;
+    v2 d_p;
+} Entity;
+
+typedef struct {
     Arena world_arena;
     World *world;
 
     TilemapPosition camera_pos;
-    TilemapPosition player_pos;
-    v2 d_player_pos;
+    u32 camera_following_entity_index;
+
+    u32 player_count;
+
+    u32 player_index_for_controller[HANDMADE_MAX_INPUTS];
+    Entity entities[256]; // array_count(((GameInput *)0)->controllers)
 
     LoadedBitmap backdrop;
 
