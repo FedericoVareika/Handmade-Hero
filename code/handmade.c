@@ -223,7 +223,7 @@ internal inline Entity *get_entity(GameState *game_state, u32 i) {
 #define get_player(game_state, i) \
     get_entity(game_state, game_state->player_index_for_controller[i])
 
-internal void initialize_entity(Entity *entity) {
+internal void initialize_player(Entity *entity) {
     *entity = (Entity){};
     entity->exists = true;
     entity->p = (TilemapPosition){
@@ -232,18 +232,24 @@ internal void initialize_entity(Entity *entity) {
 
         .offset = (v2){},
     };
+    entity->height = 1.4f;
+    entity->width = 0.75 * entity->height;
 }
 
 internal void update_player(
+        GameState *game_state,
         Entity *player,
-        GameInput *input,
-        Tilemap *tilemap,
         v2 dd_p,
-        f32 player_speed) {
+        f32 dt_for_frame) {
+    Tilemap *tilemap = game_state->world->tilemap;
+
     TilemapPosition old_p = player->p;
 
-    dd_p = v2_norm(dd_p);
-    dd_p = v2_smul(dd_p, player_speed);
+    f32 dd_p_len2 = v2_length2(dd_p);
+    if (dd_p_len2 > 1)
+        dd_p = v2_sdiv(dd_p, sqrt_f32(dd_p_len2));
+
+    dd_p = v2_smul(dd_p, player->speed);
     dd_p = v2_add(
             dd_p,
             v2_smul(player->d_p, -7.5));
@@ -251,24 +257,32 @@ internal void update_player(
     v2 d_p = player->d_p;
 
     v2 p_delta = v2_add(
-            v2_smul(d_p, input->dt_for_frame),
-            v2_smul(dd_p, 0.5f * square(input->dt_for_frame)));
+            v2_smul(d_p, dt_for_frame),
+            v2_smul(dd_p, 0.5f * square(dt_for_frame)));
 
     TilemapPosition new_p = player->p;
     new_p.offset = v2_add(new_p.offset, p_delta);
 
     player->d_p = v2_add(
             d_p, 
-            v2_smul(dd_p, input->dt_for_frame));
+            v2_smul(dd_p, dt_for_frame));
+
+    {
+        f32 epsilon = 0.00001f;
+        if (abs_f32(player->d_p.x) < epsilon) 
+            player->d_p.x = 0;
+        if (abs_f32(player->d_p.y) < epsilon) 
+            player->d_p.y = 0;
+    }
 
     new_p = recanonicalize_position(tilemap, new_p);
 #if 0
     TilemapPosition new_player_left = new_p;
-    new_player_left.offset.x -= player_width_height.x / 2;
+    new_player_left.offset.x -= player->width / 2;
     new_player_left = recanonicalize_position(tilemap, new_player_left);
 
     TilemapPosition new_player_right = new_p;
-    new_player_right.offset.x += player_width_height.x / 2;
+    new_player_right.offset.x += player->width / 2;
     new_player_right = recanonicalize_position(tilemap, new_player_right);
 
     bool collided = false;
@@ -402,6 +416,20 @@ internal void update_player(
             player->p.abs_tile_z--;
         }
     }
+
+    if (player->d_p.x != 0 || player->d_p.y != 0) { 
+        if (abs_f32(player->d_p.x) <= abs_f32(player->d_p.y)) {
+            if (player->d_p.y < 0)
+                player->facing_direction = 0; 
+            else 
+                player->facing_direction = 1; 
+        } else {
+            if (player->d_p.x < 0)
+                player->facing_direction = 2; 
+            else 
+                player->facing_direction = 3; 
+        }
+    }
 }
 
 extern GAME_UPDATE_AND_RENDER(game_update_and_render) {
@@ -488,13 +516,10 @@ extern GAME_UPDATE_AND_RENDER(game_update_and_render) {
                     "data/test/test_hero_shadow.bmp");
         }
 
-        game_state->player_index_for_controller[0] = 1;
-        initialize_entity(get_player(game_state, 0));
-        game_state->camera_following_entity_index = game_state->player_index_for_controller[0];
         game_state->camera_pos = get_room_center(
                 tiles_per_width,
                 tiles_per_height,
-                get_entity(game_state, game_state->camera_following_entity_index)->p);
+                (TilemapPosition){});
 
         initialize_arena(
                 &game_state->world_arena,
@@ -647,69 +672,93 @@ extern GAME_UPDATE_AND_RENDER(game_update_and_render) {
     World *world = game_state->world;
     Tilemap *tilemap = world->tilemap;
 
-    v2 player_width_height = {
-       0.75f * 1.4f,
-       1.4f,
-    };
-
     for (u32 i = 0; i < HANDMADE_MAX_INPUTS; i++) {
+        bool should_disconnect_entity = false;
         GameControllerInput *controller = get_game_controller(input, i);
-        if (!controller->is_connected)
-            continue;
 
-        Entity *player = get_player(game_state, i);
+        u32 player_idx = game_state->player_index_for_controller[i];
+        Entity *player = get_entity(game_state, player_idx);
+
+        // TODO(fede): Fix this!! I think that when we disconnect a controller, 
+        //      we remove it, so it does not appear as is_connected or anything.
+        if (!controller->is_connected) {
+            if (player->exists)
+                should_disconnect_entity = true;
+            else 
+                continue;
+        }
+
 
         // TODO(fede): test multiplayer, this should not work because we do not 
         //      set the player entity index.
         if (!controller->start.ended_down && 
                 controller->start.half_transition_count != 0) {
             if (player->exists) {
-                player->exists = false; 
+                should_disconnect_entity = true;
             } else {
-                initialize_entity(player);
+                if (player_idx == 0) {
+                    assert(game_state->entity_count < array_count(game_state->entities));
+                    game_state->player_index_for_controller[i] = 
+                        ++game_state->entity_count;
+                    player = get_entity(game_state, game_state->player_index_for_controller[i]);
+                }
+                initialize_player(player);
             }
         }
 
-        if (!player->exists)
-            continue;
+        if (should_disconnect_entity) {
+            player->exists = false; 
+            for (u32 i = 0;
+                    i < array_count(game_state->player_index_for_controller);
+                    i++) {
+                u32 new_camera_entity_idx =
+                    game_state->player_index_for_controller[i];
+                if (get_entity(game_state, new_camera_entity_idx)->exists) {
+                    game_state->camera_following_entity_index = 
+                        new_camera_entity_idx;
+                }
+            }
 
-        v2 dd_player_pos = {};
-        f32 player_speed = 40;
+            continue;
+        }
+
+        if (game_state->camera_following_entity_index == 0) 
+            game_state->camera_following_entity_index = player_idx;
+
+        v2 dd_player = {};
+        player->speed = 40;
 
         if (controller->is_analog) {
-            // v2 controller_stick = {
-            //     .x = controller->avg_stick_x,
-            //     .y = controller->avg_stick_y,
-            // };
-            // controller_stick = v2_smul(controller_stick, 4.0f);
-            // dd_player_pos = v2_add(dd_player_pos, controller_stick);
+            v2 controller_stick = {
+                .x = controller->avg_stick_x,
+                .y = controller->avg_stick_y,
+            };
+            controller_stick = v2_smul(controller_stick, 4.0f);
+            dd_player = v2_add(dd_player, controller_stick);
         } else {
+
             if (controller->move_up.ended_down) {
-                dd_player_pos.y = 1; 
-                game_state->hero_facing_direction = 1;
+                dd_player.y = 1; 
             }
 
             if (controller->move_left.ended_down) {
-                dd_player_pos.x = -1;
-                game_state->hero_facing_direction = 2;
+                dd_player.x = -1;
             }
 
             if (controller->move_down.ended_down) {
-                dd_player_pos.y = -1;
-                game_state->hero_facing_direction = 0;
+                dd_player.y = -1;
             }
 
             if (controller->move_right.ended_down) {
-                dd_player_pos.x = 1;
-                game_state->hero_facing_direction = 3;
+                dd_player.x = 1;
             }
 
             if (controller->button_a.ended_down) 
-                player_speed *= 5;
+                player->speed *= 5;
 
         }
 
-        update_player(get_player(game_state, i), input, tilemap, dd_player_pos, player_speed);
+        update_player(game_state, player, dd_player, input->dt_for_frame);
     }
 
     // NOTE(fede): Camera following entity movement
@@ -815,24 +864,24 @@ extern GAME_UPDATE_AND_RENDER(game_update_and_render) {
     }
 
     // TODO(fede): test multiplayer
-    for (u32 i = 0; i < HANDMADE_MAX_INPUTS; i++) {
-        Entity *player = get_player(game_state, i);
-        if (!player->exists)
+    Entity *entity = &game_state->entities[1];
+    for (u32 i = 0; i < game_state->entity_count; i++, entity++) {
+        if (!entity->exists)
             continue;
 
-        TilemapDifference player_camera_space = subtract_tilemap_positions(
+        TilemapDifference entity_camera_space = subtract_tilemap_positions(
                 tilemap->tile_side_in_meters,
-                player->p,
+                entity->p,
                 game_state->camera_pos); 
-        v2 player_screen = player_camera_space.dxy;
-        player_screen = v2_smul(player_screen, meters_to_pixels);
-        player_screen.y *= -1;
-        player_screen = v2_add(player_screen, screen_center);
+        v2 entity_screen = entity_camera_space.dxy;
+        entity_screen = v2_smul(entity_screen, meters_to_pixels);
+        entity_screen.y *= -1;
+        entity_screen = v2_add(entity_screen, screen_center);
 
 #if HANDMADE_INTERNAL
-        // NOTE(fede): draw player
+        // NOTE(fede): draw entity
         {
-            u32 facing_direction = game_state->hero_facing_direction;
+            u32 facing_direction = entity->facing_direction;
             HeroBitmaps hero_bitmaps = game_state->hero_bitmaps[facing_direction];
 
             v2 align = {
@@ -843,46 +892,46 @@ extern GAME_UPDATE_AND_RENDER(game_update_and_render) {
             debug_draw_bmp_align(
                     &game_state->hero_shadow,
                     display_buffer,
-                    player_screen, align);
+                    entity_screen, align);
 
             debug_draw_bmp_align(
                     &hero_bitmaps.torso,
                     display_buffer,
-                    player_screen, align);
+                    entity_screen, align);
 
             debug_draw_bmp_align(
                     &hero_bitmaps.cape,
                     display_buffer,
-                    player_screen, align);
+                    entity_screen, align);
 
             debug_draw_bmp_align(
                     &hero_bitmaps.head,
                     display_buffer,
-                    player_screen, align);
+                    entity_screen, align);
         }
 
-        // NOTE(fede): draw player ground point
+        // NOTE(fede): draw entity ground point
         {
             draw_rectangle(display_buffer,
-                    v2_sub(player_screen, (v2){2, 2}),
-                    v2_add(player_screen, (v2){2, 2}),
+                    v2_sub(entity_screen, (v2){2, 2}),
+                    v2_add(entity_screen, (v2){2, 2}),
                     1, 0, 0);
         }
 
-        // NOTE(fede): draw player velocity
+        // NOTE(fede): draw entity velocity
         {
-            v2 d_player_pos_screen = v2_add(
-                    player_screen,
-                    v2_smul(v2_vmul(player->d_p, (v2){1, -1}), 10));
+            v2 d_entity_pos_screen = v2_add(
+                    entity_screen,
+                    v2_smul(v2_vmul(entity->d_p, (v2){1, -1}), 10));
 
             draw_rectangle(display_buffer,
-                    v2_sub(d_player_pos_screen, (v2){2, 2}),
-                    v2_add(d_player_pos_screen, (v2){2, 2}),
+                    v2_sub(d_entity_pos_screen, (v2){2, 2}),
+                    v2_add(d_entity_pos_screen, (v2){2, 2}),
                     0, 1, 0);
 
             draw_rectangle(display_buffer,
                     (v2){0, 0},
-                    (v2){v2_length2(player->d_p), 5},
+                    (v2){v2_length2(entity->d_p), 5},
                     0, 1, 0);
         }
 #endif

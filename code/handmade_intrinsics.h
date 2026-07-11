@@ -29,6 +29,18 @@ internal inline f32 atan2_f32(f32 y, f32 x) {
     return atan2f(y, x);
 } 
 
+internal inline f32 abs_f32(f32 a) {
+    return fabs(a);
+} 
+
+internal inline f32 sqrt_f32(f32 a) {
+    return sqrtf(a);
+}
+
+// internal inline f32 inv_sqrt_f32(f32 a) {
+//     return i
+// }
+
 typedef struct {
     u32 index;
     bool found;

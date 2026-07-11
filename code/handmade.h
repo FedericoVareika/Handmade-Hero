@@ -85,6 +85,12 @@ typedef struct {
     bool exists;
     TilemapPosition p;
     v2 d_p;
+
+    f32 width;
+    f32 height;
+
+    u32 facing_direction;
+    f32 speed;
 } Entity;
 
 typedef struct {
@@ -94,14 +100,13 @@ typedef struct {
     TilemapPosition camera_pos;
     u32 camera_following_entity_index;
 
-    u32 player_count;
 
     u32 player_index_for_controller[HANDMADE_MAX_INPUTS];
+    u32 entity_count;
     Entity entities[256]; // array_count(((GameInput *)0)->controllers)
 
     LoadedBitmap backdrop;
 
-    u32 hero_facing_direction;
     HeroBitmaps hero_bitmaps[4];
     LoadedBitmap hero_shadow;
 } GameState;

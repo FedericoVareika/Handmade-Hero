@@ -523,6 +523,16 @@ internal bool sdl_handle_event(SDL_Event *event, SDLBackbuffer *backbuffer,
                                     key_event.type == SDL_KEYDOWN);
         } break;
 
+        case SDLK_y: {
+            sdl_handle_keyboard_key(&keyboard_controller->back,
+                                    key_event.type == SDL_KEYDOWN);
+        } break;
+
+        case SDLK_u: {
+            sdl_handle_keyboard_key(&keyboard_controller->start,
+                                    key_event.type == SDL_KEYDOWN);
+        } break;
+
         case SDLK_RETURN: {
             global_game_running = false;
         } break;
@@ -1196,10 +1206,10 @@ int main(void) {
                 sdl_handle_button(&old_controller_state->right_shoulder,
                                   GET_BUTTON(controller_handle, RIGHTSHOULDER),
                                   &new_controller_state->right_shoulder);
-                sdl_handle_button(&old_controller_state->right_shoulder,
+                sdl_handle_button(&old_controller_state->back,
                                   GET_BUTTON(controller_handle, BACK),
                                   &new_controller_state->back);
-                sdl_handle_button(&old_controller_state->right_shoulder,
+                sdl_handle_button(&old_controller_state->start,
                                   GET_BUTTON(controller_handle, START),
                                   &new_controller_state->start);
 
