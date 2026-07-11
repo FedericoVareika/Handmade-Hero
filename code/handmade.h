@@ -85,6 +85,7 @@ typedef struct {
     bool exists;
     TilemapPosition p;
     v2 d_p;
+    f32 t;
 
     f32 width;
     f32 height;

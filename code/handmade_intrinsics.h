@@ -37,10 +37,6 @@ internal inline f32 sqrt_f32(f32 a) {
     return sqrtf(a);
 }
 
-// internal inline f32 inv_sqrt_f32(f32 a) {
-//     return i
-// }
-
 typedef struct {
     u32 index;
     bool found;

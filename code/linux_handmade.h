@@ -95,4 +95,4 @@ typedef struct {
     char *one_past_last_slash;
 } LinuxState;
 
-#endif //LINUX_HANDMADE_H
+#endif // LINUX_HANDMADE_H
