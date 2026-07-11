@@ -389,9 +389,9 @@ internal void linux_end_input_playback(LinuxState *state) {
     state->playing_index = 0;
 }
 
-internal void linux_record_input(LinuxState *state, GameInput recording_input) {
+internal void linux_record_input(LinuxState *state, GameInput *recording_input) {
     u64 bytes_to_write = sizeof(GameInput);
-    memcpy(state->memory_map + state->bytes_written, (void *)&recording_input,
+    memcpy(state->memory_map + state->bytes_written, (void *)recording_input,
            bytes_to_write);
     state->bytes_written += bytes_to_write;
 }
@@ -1022,9 +1022,9 @@ int main(void) {
      */
 
     int refresh_rate = mode.refresh_rate;
-    refresh_rate = 30;
+    refresh_rate = 60;
 
-    int game_update_rate = refresh_rate;
+    int game_update_rate = refresh_rate / 2;
     f32 target_seconds_per_frame = 1.0f / (f32)game_update_rate;
 
     SDLControllers controllers = {};
@@ -1073,11 +1073,10 @@ int main(void) {
         return 0;
     }
 
-    GameInput old_input = {};
-    GameInput new_input = {};
-
-    new_input.dt_for_frame = target_seconds_per_frame;
-    old_input.dt_for_frame = target_seconds_per_frame;
+    GameInput input[2] = {};
+    GameInput *new_input = &input[0];
+    GameInput *old_input = &input[1];
+    // old_input.dt_for_frame = target_seconds_per_frame;
 
     u64 last_counter = SDL_GetPerformanceCounter();
 
@@ -1114,6 +1113,7 @@ int main(void) {
     }
 
     while (global_game_running) {
+        new_input->dt_for_frame = target_seconds_per_frame;
 
         if (linux_game_has_changed(&game, game_dll_filename)) {
             linux_reload_gamelib(&game, game_dll_filename);
@@ -1123,9 +1123,9 @@ int main(void) {
         }
 
         GameControllerInput *old_keyboard_controller =
-            get_game_controller(&old_input, 0);
+            get_game_controller(old_input, 0);
         GameControllerInput *new_keyboard_controller =
-            get_game_controller(&new_input, 0);
+            get_game_controller(new_input, 0);
         *new_keyboard_controller = (GameControllerInput){};
         new_keyboard_controller->is_connected = true;
         for (u32 i = 0; i < array_count(new_keyboard_controller->buttons);
@@ -1142,12 +1142,12 @@ int main(void) {
         // NOTE(fede): mouse input
         {
             // TODO(fede): Update mouse.z (scroll wheel) position
-            u32 mouse_flags = SDL_GetMouseState(&new_input.mouse_input.x,
-                                                &new_input.mouse_input.y);
+            u32 mouse_flags = SDL_GetMouseState(&new_input->mouse_input.x,
+                                                &new_input->mouse_input.y);
             for (int i = 0; i < 3; i++) {
                 bool is_down = (mouse_flags & SDL_BUTTON(i + 1)) > 0;
-                sdl_handle_button(&old_input.mouse_input.buttons[i], is_down,
-                                  &new_input.mouse_input.buttons[i]);
+                sdl_handle_button(&old_input->mouse_input.buttons[i], is_down,
+                                  &new_input->mouse_input.buttons[i]);
             }
         }
 
@@ -1162,9 +1162,9 @@ int main(void) {
 
                 int our_controller_index = sdl_controller_index + 1;
                 GameControllerInput *old_controller_state =
-                    get_game_controller(&old_input, our_controller_index);
+                    get_game_controller(old_input, our_controller_index);
                 GameControllerInput *new_controller_state =
-                    get_game_controller(&new_input, our_controller_index);
+                    get_game_controller(new_input, our_controller_index);
 
                 SDL_GameController *controller_handle =
                     controllers.handles[sdl_controller_index];
@@ -1246,11 +1246,11 @@ int main(void) {
         }
 
         if (state.playing_index) {
-            linux_playback_input(&state, &new_input);
+            linux_playback_input(&state, new_input);
         }
 
         ThreadContext thread = {};
-        game.update_and_render(&thread, &game_memory, &game_buffer, &new_input);
+        game.update_and_render(&thread, &game_memory, &game_buffer, new_input);
 
         SDLSoundWriteMarker write_marker = sdl_get_sound_write_marker(
             &sound_output, &ring_buffer, target_seconds_per_frame, last_counter,
@@ -1268,9 +1268,9 @@ int main(void) {
         // TODO(fede): This is probably copying the entire struct 3 times,
         //             check if these should be pointers instead (like casey
         //             did)
-        GameInput aux_input = old_input;
-        old_input = new_input;
-        new_input = aux_input;
+        GameInput *temp = new_input;
+        new_input = old_input;
+        old_input = temp;
 
         u64 end_counter = SDL_GetPerformanceCounter();
 

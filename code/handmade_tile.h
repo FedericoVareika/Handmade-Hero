@@ -49,12 +49,12 @@ typedef struct {
     u32 abs_tile_y;
     u32 abs_tile_z;
 
-    f32 tile_rel_x;
-    f32 tile_rel_y;
+    v2 offset;
 } TilemapPosition;
 
 typedef struct {
-    f32 dx, dy, dz;
+    v2 dxy;
+    f32 dz;
 } TilemapDifference;
 
 #endif // HANDMADE_TILE_H

@@ -12,13 +12,14 @@ internal void fill_audio_buffer(GameSoundOutputBuffer *buffer, int tone_hz) {
     }
 }
 
-internal void draw_rectangle(GameDisplayBuffer *buffer, f32 real_min_x,
-                             f32 real_min_y, f32 real_max_x, f32 real_max_y,
-                             f32 r, f32 g, f32 b) {
-    int min_x = round_f32_to_int(real_min_x);
-    int min_y = round_f32_to_int(real_min_y);
-    int max_x = round_f32_to_int(real_max_x);
-    int max_y = round_f32_to_int(real_max_y);
+internal void draw_rectangle(GameDisplayBuffer *buffer, 
+        v2 real_min, v2 real_max,
+        f32 r, f32 g, f32 b) {
+
+    int min_x = round_f32_to_int(real_min.x);
+    int min_y = round_f32_to_int(real_min.y);
+    int max_x = round_f32_to_int(real_max.x);
+    int max_y = round_f32_to_int(real_max.y);
 
     min_x = max(0, min_x);
     min_y = max(0, min_y);
@@ -166,13 +167,12 @@ internal void debug_draw_pixel(u32 *pixel, u32 value) {
 internal void debug_draw_bmp(
         LoadedBitmap *bitmap,
         GameDisplayBuffer *buffer,
-        f32 top_left_x,
-        f32 top_left_y) {
+        v2 top_left) {
 
-    int min_x = round_f32_to_int(top_left_x);
-    int min_y = round_f32_to_int(top_left_y);
-    int max_x = round_f32_to_int(top_left_x + (f32)bitmap->width);
-    int max_y = round_f32_to_int(top_left_y + (f32)bitmap->height);
+    int min_x = round_f32_to_int(top_left.x);
+    int min_y = round_f32_to_int(top_left.y);
+    int max_x = round_f32_to_int(top_left.x + (f32)bitmap->width);
+    int max_y = round_f32_to_int(top_left.y + (f32)bitmap->height);
 
     int bitmap_offset_x = -min(0, min_x);
     int bitmap_offset_y = -min(0, min_y);
@@ -195,10 +195,24 @@ internal void debug_draw_bmp(
     }
 }
 
-#define debug_draw_bmp_align(bitmap, buffer, top_left_x, top_left_y, align_x, align_y)  \
-    debug_draw_bmp(bitmap, buffer, top_left_x - (f32)align_x, top_left_y - (f32)align_y)
+#define debug_draw_bmp_align(bitmap, buffer, top_left, align)  \
+    debug_draw_bmp(bitmap, buffer, v2_sub(top_left, align))
 
 #endif 
+
+internal v2 closest_point_in_rectangle(
+        v2 min_corner, 
+        v2 max_corner, 
+        v2 p) {
+    v2 result = p;
+    result.x = max(result.x, min_corner.x);
+    result.x = min(result.x, max_corner.x);
+
+    result.y = max(result.y, min_corner.y);
+    result.y = min(result.y, max_corner.y);
+    
+    return result;
+}
 
 extern GAME_UPDATE_AND_RENDER(game_update_and_render) {
     assert(sizeof(GameState) <= memory->permanent_storage_size);
@@ -288,8 +302,7 @@ extern GAME_UPDATE_AND_RENDER(game_update_and_render) {
             .abs_tile_x = 3,
             .abs_tile_y = 3,
 
-            .tile_rel_x = 0,
-            .tile_rel_y = 0,
+            .offset = (v2){},
         };
 
         game_state->camera_pos = get_room_center(
@@ -448,94 +461,225 @@ extern GAME_UPDATE_AND_RENDER(game_update_and_render) {
     World *world = game_state->world;
     Tilemap *tilemap = world->tilemap;
 
-    f32 player_dx = 0;
-    f32 player_dy = 0;
+    v2 player_width_height = {
+       0.75f * 1.4f,
+       1.4f,
+    };
 
-    f32 player_velocity = 5;
+    TilemapPosition old_player_pos = game_state->player_pos;
+
     for (int i = 0; i < HANDMADE_MAX_INPUTS; i++) {
         GameControllerInput *controller = get_game_controller(input, i);
         if (!controller->is_connected)
             continue;
 
-        if (controller->button_a.ended_down) 
-            player_velocity *= 5;
+        v2 dd_player_pos = {};
+        f32 player_speed = 10;
 
         if (controller->is_analog) {
-            player_dx += (int)(controller->avg_stick_x * 4.0f);
-            player_dy += (int)(controller->avg_stick_y * 4.0f);
+            // v2 controller_stick = {
+            //     .x = controller->avg_stick_x,
+            //     .y = controller->avg_stick_y,
+            // };
+            // controller_stick = v2_smul(controller_stick, 4.0f);
+            // dd_player_pos = v2_add(dd_player_pos, controller_stick);
         } else {
             if (controller->move_up.ended_down) {
-                player_dy += 1; 
+                dd_player_pos.y = 1; 
                 game_state->hero_facing_direction = 1;
             }
 
             if (controller->move_left.ended_down) {
-                player_dx -= 1;
+                dd_player_pos.x = -1;
                 game_state->hero_facing_direction = 2;
             }
 
             if (controller->move_down.ended_down) {
-                player_dy -= 1;
+                dd_player_pos.y = -1;
                 game_state->hero_facing_direction = 0;
             }
 
             if (controller->move_right.ended_down) {
-                player_dx += 1;
+                dd_player_pos.x = 1;
                 game_state->hero_facing_direction = 3;
             }
 
-            player_dx *= player_velocity * input->dt_for_frame;
-            player_dy *= player_velocity * input->dt_for_frame;
+            if (controller->button_a.ended_down) 
+                player_speed *= 5;
+
+        }
+
+        dd_player_pos = v2_norm(dd_player_pos);
+        dd_player_pos = v2_smul(dd_player_pos, player_speed);
+        dd_player_pos = v2_add(
+            dd_player_pos,
+            v2_smul(game_state->d_player_pos, -1.5));
+
+        v2 d_player_pos = game_state->d_player_pos;
+
+        v2 player_pos_delta = v2_add(
+                v2_smul(d_player_pos, input->dt_for_frame),
+                v2_smul(dd_player_pos, 0.5f * square(input->dt_for_frame)));
+
+        TilemapPosition new_player_pos = game_state->player_pos;
+        new_player_pos.offset = v2_add(new_player_pos.offset, player_pos_delta);
+
+        game_state->d_player_pos = v2_add(
+                d_player_pos, 
+                v2_smul(dd_player_pos, input->dt_for_frame));
+
+        new_player_pos = recanonicalize_position(tilemap, new_player_pos);
+#if 0
+        TilemapPosition new_player_left = new_player_pos;
+        new_player_left.offset.x -= player_width_height.x / 2;
+        new_player_left = recanonicalize_position(tilemap, new_player_left);
+
+        TilemapPosition new_player_right = new_player_pos;
+        new_player_right.offset.x += player_width_height.x / 2;
+        new_player_right = recanonicalize_position(tilemap, new_player_right);
+
+        bool collided = false;
+        TilemapPosition collision_pos = {};
+
+        if (!is_tilemap_point_empty(tilemap, new_player_pos)) {
+            collided = true;
+            collision_pos = new_player_pos;
+        }
+
+        if (!is_tilemap_point_empty(tilemap, new_player_left)) {
+            collided = true;
+            collision_pos = new_player_left;
+        } 
+
+        if (!is_tilemap_point_empty(tilemap, new_player_right)) {
+            collided = true;
+            collision_pos = new_player_right;
+        } 
+
+        if (collided) {
+            v2 r = {};
+            if (collision_pos.abs_tile_x < game_state->player_pos.abs_tile_x) {
+                r = (v2){1, 0};
+            }
+            if (collision_pos.abs_tile_x > game_state->player_pos.abs_tile_x) {
+                r = (v2){-1, 0};
+            } 
+            if (collision_pos.abs_tile_y < game_state->player_pos.abs_tile_y) {
+                r = (v2){0, 1};
+            } 
+            if (collision_pos.abs_tile_y > game_state->player_pos.abs_tile_y) {
+                r = (v2){0, -1};
+            }
+
+            game_state->d_player_pos = v2_add(
+                    game_state->d_player_pos,
+                    v2_smul(r, -1 * v2_dot(game_state->d_player_pos, r)));
+        } else {
+            game_state->player_pos = new_player_pos;
+        }
+#else
+
+        // NOTE(fede): This is collision/movement for a player that is a single 
+        //      point, the objective is to make him an ellipsis.
+        //
+        //      Also note that min_tile_* and one_past_max_tile_* do not cover 
+        //      the edge cases that they wrap around the u32 limit. 
+        //      For example: 
+        //          old_player_pos.abs_tile_x = 0
+        //          new_player_pos.abs_tile_x = 1 
+        //      Therefore:
+        //        min(old_player_pos.abs_tile_x - 1, new_player_pos.abs_tile_x - 1) = 0, not ~4bn
+        //
+        u32 min_tile_x = min(old_player_pos.abs_tile_x - 1, new_player_pos.abs_tile_x - 1);
+        u32 min_tile_y = min(old_player_pos.abs_tile_y - 1, new_player_pos.abs_tile_y - 1);
+        u32 one_past_max_tile_x = max(old_player_pos.abs_tile_x + 2, new_player_pos.abs_tile_x + 2);
+        u32 one_past_max_tile_y = max(old_player_pos.abs_tile_y + 2, new_player_pos.abs_tile_y + 2);
+        u32 abs_tile_z = old_player_pos.abs_tile_z;
+
+        f32 best_distance2 = v2_length2(player_pos_delta);
+        TilemapPosition best_player_pos = old_player_pos;
+
+        for (u32 abs_tile_y = min_tile_y;
+                abs_tile_y != one_past_max_tile_y;
+                abs_tile_y++) {
+            for (u32 abs_tile_x = min_tile_x;
+                    abs_tile_x != one_past_max_tile_x;
+                    abs_tile_x++) {
+
+                TilemapPosition tile_center = (TilemapPosition){
+                    abs_tile_x = abs_tile_x,
+                    abs_tile_y = abs_tile_y,
+                    abs_tile_z = abs_tile_z,
+                };
+                
+                u32 tile_value = get_tile_value_at_pos(tilemap, tile_center);
+
+                if (is_tile_value_empty(tile_value)) {
+                    v2 min_corner = v2_smul((v2){
+                            tilemap->tile_side_in_meters,
+                            tilemap->tile_side_in_meters,
+                        }, -0.5);
+
+                    v2 max_corner = v2_smul((v2){
+                            tilemap->tile_side_in_meters,
+                            tilemap->tile_side_in_meters,
+                        }, 0.5);
+
+                    TilemapDifference rel_new_player_pos = 
+                        subtract_tilemap_positions(
+                            tilemap->tile_side_in_meters,
+                            new_player_pos,
+                            tile_center);
+
+                    v2 test_p = closest_point_in_rectangle(
+                            min_corner, max_corner, rel_new_player_pos.dxy);
+                    
+                    f32 test_distance2 = v2_length2(
+                            v2_sub(test_p, rel_new_player_pos.dxy));
+
+                    if (test_distance2 < best_distance2) {
+                        best_distance2 = test_distance2;
+                        TilemapPosition test_position = tile_center;
+                        test_position.offset = test_p;
+                        best_player_pos = test_position;
+                        
+                        // NOTE(fede): point is inside rectangle
+                        if (test_p.x == rel_new_player_pos.dxy.x && 
+                            test_p.y == rel_new_player_pos.dxy.y) {
+                            break;
+                        }
+                    }
+                }
+            }
+        }
+
+        game_state->player_pos = best_player_pos;
+#endif
+    }
+
+    if (!are_on_same_tile(game_state->player_pos, old_player_pos)) {
+        u32 tile_val = get_tile_value_at_pos(tilemap, game_state->player_pos);
+        if (tile_val == 3) {
+            game_state->player_pos.abs_tile_z++;
+            game_state->camera_pos.abs_tile_z++;
+        } else if (tile_val == 4) {
+            game_state->player_pos.abs_tile_z--;
+            game_state->camera_pos.abs_tile_z--;
         }
     }
 
-    f32 player_width = tilemap->tile_side_in_meters * 0.5;
-    f32 player_height = tilemap->tile_side_in_meters * 0.75;
-
-    // NOTE(fede): Player movement and collision checking
-    {
-        TilemapPosition new_player_pos = game_state->player_pos;
-        new_player_pos.tile_rel_x += player_dx;
-        new_player_pos.tile_rel_y += player_dy;
-
-        TilemapPosition new_player_left = new_player_pos;
-        new_player_left.tile_rel_x -= player_width / 2;
-        TilemapPosition new_player_right = new_player_pos;
-        new_player_right.tile_rel_x += player_width / 2;
-
-        new_player_pos = recanonicalize_position(tilemap, new_player_pos);
-        new_player_left = recanonicalize_position(tilemap, new_player_left);
-        new_player_right = recanonicalize_position(tilemap, new_player_right);
-
-        if (is_tilemap_point_empty(tilemap, new_player_left) &&
-            is_tilemap_point_empty(tilemap, new_player_right)) {
-            if (!are_on_same_tile(new_player_pos, game_state->player_pos)) {
-                u32 tile_val = get_tile_value_at_pos(tilemap, new_player_pos);
-                if (tile_val == 3) {
-                    new_player_pos.abs_tile_z++;
-                    game_state->camera_pos.abs_tile_z++;
-                } else if (tile_val == 4) {
-                    new_player_pos.abs_tile_z--;
-                    game_state->camera_pos.abs_tile_z--;
-                }
-            }
-
-            if (!are_on_same_room(
-                        tiles_per_width,
-                        tiles_per_height,
-                        new_player_pos, game_state->player_pos)) {
-                game_state->camera_pos = get_room_center(
-                        tiles_per_width,
-                        tiles_per_height,
-                        new_player_pos);
-            }
-
-            game_state->player_pos = new_player_pos;
-        }
+    if (!are_on_same_room(
+                tiles_per_width,
+                tiles_per_height,
+                game_state->player_pos, old_player_pos)) {
+        game_state->camera_pos = get_room_center(
+                tiles_per_width,
+                tiles_per_height,
+                game_state->player_pos);
     }
 
 #if HANDMADE_INTERNAL
-    debug_draw_bmp(&game_state->backdrop, display_buffer, 0, 0);
+    debug_draw_bmp(&game_state->backdrop, display_buffer, (v2){0, 0});
 #else 
     draw_rectangle(display_buffer, 0, 0, display_buffer->width,
                    display_buffer->height, 1, 0, 1);
@@ -547,8 +691,10 @@ extern GAME_UPDATE_AND_RENDER(game_update_and_render) {
     f32 lower_left_x = -tile_side_in_pixels / 2;
     f32 lower_left_y = display_buffer->height;
 
-    f32 screen_center_x = display_buffer->width / 2;
-    f32 screen_center_y = display_buffer->height / 2;
+    v2 screen_center = {
+        .x = display_buffer->width / 2,
+        .y = display_buffer->height / 2,
+    };
 
     {
 
@@ -595,24 +741,30 @@ extern GAME_UPDATE_AND_RENDER(game_update_and_render) {
 
                 // NOTE(fede): Screen position 
                 f32 min_x, min_y, max_x, max_y;
+                v2 min, max;
                 {
-                    f32 center_x = screen_center_x;
-                    f32 center_y = screen_center_y;
+                    v2 center = screen_center;
+                    
+                    // TODO(fede): port to v2
+                    center.x += rel_col * tile_side_in_pixels;
+                    center.y -= rel_row * tile_side_in_pixels;
 
-                    center_x += rel_col * tile_side_in_pixels;
-                    center_y -= rel_row * tile_side_in_pixels;
+                    v2 camera_offset = game_state->camera_pos.offset;
+                    camera_offset = v2_smul(camera_offset, meters_to_pixels);
+                    camera_offset.y *= -1;
+                    center = v2_sub(center, camera_offset);
 
-                    center_x -= meters_to_pixels * game_state->camera_pos.tile_rel_x;
-                    center_y += meters_to_pixels * game_state->camera_pos.tile_rel_y;
-
-                    min_x = center_x - tile_side_in_pixels * 0.5;
-                    min_y = center_y + tile_side_in_pixels * 0.5;
-                    max_x = center_x + tile_side_in_pixels * 0.5;
-                    max_y = center_y - tile_side_in_pixels * 0.5;
+                    v2 v2_tile_side_in_pixels = {
+                        tile_side_in_pixels,
+                        tile_side_in_pixels,
+                    };
+                    v2_tile_side_in_pixels = v2_smul(v2_tile_side_in_pixels, 0.5);
+                    min = v2_sub(center, v2_tile_side_in_pixels);
+                    max = v2_add(center, v2_tile_side_in_pixels);
                 }
 
                 draw_rectangle(display_buffer, 
-                        min_x, max_y, max_x, min_y,
+                        min, max,
                         r, g, b);
             }
         }
@@ -624,65 +776,62 @@ extern GAME_UPDATE_AND_RENDER(game_update_and_render) {
                 tilemap->tile_side_in_meters,
                 game_state->player_pos,
                 game_state->camera_pos); 
-        f32 player_x_screen = player_camera_space.dx * meters_to_pixels + screen_center_x; 
-        f32 player_y_screen = player_camera_space.dy * -meters_to_pixels + screen_center_y; 
-
+        v2 player_screen = player_camera_space.dxy;
+        player_screen = v2_smul(player_screen, meters_to_pixels);
+        player_screen.y *= -1;
+        player_screen = v2_add(player_screen, screen_center);
+            
 #if HANDMADE_INTERNAL
         // NOTE(fede): draw player
         {
             u32 facing_direction = game_state->hero_facing_direction;
             HeroBitmaps hero_bitmaps = game_state->hero_bitmaps[facing_direction];
 
-            u32 align_x = hero_bitmaps.align_x;
-            u32 align_y = hero_bitmaps.align_y;
+            v2 align = {
+                (f32)hero_bitmaps.align_x,
+                (f32)hero_bitmaps.align_y,
+            };
 
             debug_draw_bmp_align(
                     &game_state->hero_shadow,
                     display_buffer,
-                    player_x_screen, player_y_screen, align_x, align_y);
+                    player_screen, align);
 
             debug_draw_bmp_align(
                     &hero_bitmaps.torso,
                     display_buffer,
-                    player_x_screen, player_y_screen, align_x, align_y);
+                    player_screen, align);
 
             debug_draw_bmp_align(
                     &hero_bitmaps.cape,
                     display_buffer,
-                    player_x_screen, player_y_screen, align_x, align_y);
+                    player_screen, align);
 
             debug_draw_bmp_align(
                     &hero_bitmaps.head,
                     display_buffer,
-                    player_x_screen, player_y_screen, align_x, align_y);
+                    player_screen, align);
         }
 
         // NOTE(fede): draw player ground point
         {
             draw_rectangle(display_buffer,
-                    player_x_screen - 2,
-                    player_y_screen - 2,
-                    player_x_screen + 2,
-                    player_y_screen + 2,
+                    v2_sub(player_screen, (v2){2, 2}),
+                    v2_add(player_screen, (v2){2, 2}),
                     1, 0, 0);
         }
 
-#else 
-        f32 player_pixel_width = player_width * meters_to_pixels; 
-        f32 player_pixel_height = player_height * meters_to_pixels; 
+        // NOTE(fede): draw player velocity
+        {
+            v2 d_player_pos_screen = v2_add(
+                player_screen,
+                v2_smul(v2_vmul(game_state->d_player_pos, (v2){1, -1}), 10));
 
-        f32 player_left = player_x - player_pixel_width / 2;
-        f32 player_bottom = player_y;
-
-        f32 player_right = player_x + player_pixel_width / 2;
-        f32 player_top = player_y - player_pixel_height;
-
-        draw_rectangle(display_buffer,
-                player_left,
-                player_top,
-                player_right,
-                player_bottom,
-                1, 1, 1);
+            draw_rectangle(display_buffer,
+                    v2_sub(d_player_pos_screen, (v2){2, 2}),
+                    v2_add(d_player_pos_screen, (v2){2, 2}),
+                    0, 1, 0);
+        }
 #endif
     }
     

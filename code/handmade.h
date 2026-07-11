@@ -15,6 +15,7 @@
  * */
 
 #include "handmade_platform.h"
+#include "handmade_math.h" 
 
 #if HANDMADE_SLOW
 
@@ -84,8 +85,9 @@ typedef struct {
     Arena world_arena;
     World *world;
 
-    TilemapPosition player_pos;
     TilemapPosition camera_pos;
+    TilemapPosition player_pos;
+    v2 d_player_pos;
 
     LoadedBitmap backdrop;
 

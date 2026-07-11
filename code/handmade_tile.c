@@ -49,9 +49,6 @@ internal bool is_tilechunk_point_empty(
     assert(tilechunk);
 
     u32 value = get_tile_value_unchecked(tilemap, tilechunk, test_tile_x, test_tile_y);
-    return value == 1 || 
-           value == 3 ||
-           value == 4;
 
 }
 
@@ -61,12 +58,12 @@ internal void recanonicalize_coord(
         Tilemap *tilemap,
         f32 *tile_rel,
         u32 *tile) {
-    f32 offset = round_f32_to_int(*tile_rel / tilemap->tile_side_in_meters); 
+    int offset = round_f32_to_int(*tile_rel / tilemap->tile_side_in_meters); 
 
-    *tile += truncate_f32_to_int(offset);
+    *tile += offset;
     *tile_rel -= offset * tilemap->tile_side_in_meters; 
 
-    assert(*tile_rel * 2 >= -tilemap->tile_side_in_meters);
+    assert(*tile_rel >= -0.5 * tilemap->tile_side_in_meters);
     // TODO(fede): STUDY this crashed once 
     //      This is a floating point precision error. Values to recreate:
     //          tilemap->tile_side_in_meters = 1.39999998   // 1.4 input cast to f32
@@ -80,7 +77,7 @@ internal void recanonicalize_coord(
     //          0.700000048 * 2 = 1.4000001 
     //          1.4000001 <= 1.39999998         = false
     //
-    assert(*tile_rel * 2 <= tilemap->tile_side_in_meters); 
+    assert(*tile_rel <= 0.5 * tilemap->tile_side_in_meters); 
 }
 
 internal TilemapPosition recanonicalize_position(
@@ -88,8 +85,8 @@ internal TilemapPosition recanonicalize_position(
         TilemapPosition can_pos) {
     TilemapPosition result = can_pos;
 
-    recanonicalize_coord(tilemap, &result.tile_rel_x, &result.abs_tile_x);
-    recanonicalize_coord(tilemap, &result.tile_rel_y, &result.abs_tile_y);
+    recanonicalize_coord(tilemap, &result.offset.x, &result.abs_tile_x);
+    recanonicalize_coord(tilemap, &result.offset.y, &result.abs_tile_y);
 
     return result;
 }
@@ -106,28 +103,6 @@ internal inline TileChunkPosition get_chunk_position_for(
         .rel_tile_x = abs_tile_x & tilemap->chunk_mask,
         .rel_tile_y = abs_tile_y & tilemap->chunk_mask,
     };
-}
-
-internal bool is_tilemap_point_empty(Tilemap *tilemap, TilemapPosition tilemap_pos) {
-    TileChunkPosition chunk_pos = get_chunk_position_for(
-            tilemap,
-            tilemap_pos.abs_tile_x,
-            tilemap_pos.abs_tile_y,
-            tilemap_pos.abs_tile_z);
-
-    // TODO(fede): this crashes when trying to wrap around (i think?). 
-    //      when i went left with speed, i guess that the 
-    //      new_tile_left.abs_tile_x = 0xffffffff
-    //      after recanonicalize_position. 
-    //      This turns into an invalid chunk coord later, i dont know if this 
-    //      should be handled in recanonicalization, or in get_tilechunk.
-    TileChunk *tilechunk = get_tilechunk(tilemap, chunk_pos);
-    // assert(tilechunk);
-    if (!tilechunk || !tilechunk->tiles)
-        return false;
-
-    return is_tilechunk_point_empty(tilemap, tilechunk, chunk_pos.rel_tile_x,
-                                  chunk_pos.rel_tile_y);
 }
 
 internal u32 get_tile_value(
@@ -152,6 +127,17 @@ internal u32 get_tile_value_at_pos(Tilemap *tilemap, TilemapPosition pos) {
             pos.abs_tile_x,
             pos.abs_tile_y,
             pos.abs_tile_z);
+}
+
+internal bool is_tile_value_empty(u32 tile_value) {
+    return tile_value == 1 || 
+           tile_value == 3 ||
+           tile_value == 4;
+}
+
+internal bool is_tilemap_point_empty(Tilemap *tilemap, TilemapPosition tilemap_pos) {
+    u32 value = get_tile_value_at_pos(tilemap, tilemap_pos);
+    return is_tile_value_empty(value);
 }
 
 internal void set_tile_value(
@@ -214,19 +200,18 @@ internal TilemapDifference subtract_tilemap_positions(
         TilemapPosition pos_a, 
         TilemapPosition pos_b) {
 
-    f32 dx = (f32)pos_a.abs_tile_x - (f32)pos_b.abs_tile_x;
-    f32 dy = (f32)pos_a.abs_tile_y - (f32)pos_b.abs_tile_y;
+    v2 dxy = {
+        (f32)pos_a.abs_tile_x - (f32)pos_b.abs_tile_x,
+        (f32)pos_a.abs_tile_y - (f32)pos_b.abs_tile_y,
+    };
+
     f32 dz = (f32)pos_a.abs_tile_z - (f32)pos_b.abs_tile_z;
 
-    dx *= tile_side_in_meters;
-    dy *= tile_side_in_meters;
-
-    dx += pos_a.tile_rel_x - pos_b.tile_rel_x;
-    dy += pos_a.tile_rel_y - pos_b.tile_rel_y;
+    dxy = v2_smul(dxy, tile_side_in_meters);
+    dxy = v2_add(dxy, v2_sub(pos_a.offset, pos_b.offset));
 
     return (TilemapDifference){
-        .dx = dx,
-        .dy = dy,
+        .dxy = dxy,
         .dz = dz,
     };
 }
