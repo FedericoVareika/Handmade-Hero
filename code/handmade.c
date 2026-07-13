@@ -323,8 +323,7 @@ internal void update_player(GameState *game_state,
         old_p = player->p;
 
         new_p = old_p;
-        new_p.offset = v2_add(old_p.offset, p_delta);
-        new_p = recanonicalize_position(tilemap, new_p);
+        new_p = offset(tilemap, new_p, p_delta);
 
         u32 start_tile_x = old_p.abs_tile_x;
         u32 start_tile_y = old_p.abs_tile_y;
@@ -388,8 +387,7 @@ internal void update_player(GameState *game_state,
 
         // TODO(fede): I feel that this is clunky, review.
         p_delta = v2_smul(p_delta, t_min);
-        player->p.offset = v2_add(player->p.offset, p_delta);
-        player->p = recanonicalize_position(tilemap, player->p);
+        player->p = offset(tilemap, player->p, p_delta);
 
         player->d_p = v2_add(
                 player->d_p,
@@ -839,7 +837,7 @@ extern GAME_UPDATE_AND_RENDER(game_update_and_render) {
                 center.x += rel_col * tile_side_in_pixels;
                 center.y -= rel_row * tile_side_in_pixels;
                 
-                v2 camera_offset = game_state->camera_pos.offset;
+                v2 camera_offset = game_state->camera_pos.offset_;
                 camera_offset = v2_smul(camera_offset, meters_to_pixels);
                 camera_offset.y *= -1;
                 center = v2_sub(center, camera_offset);

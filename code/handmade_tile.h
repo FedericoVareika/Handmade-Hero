@@ -49,7 +49,7 @@ typedef struct {
     u32 abs_tile_y;
     u32 abs_tile_z;
 
-    v2 offset;
+    v2 offset_;
 } TilemapPosition;
 
 // TODO(fede): replace with v3

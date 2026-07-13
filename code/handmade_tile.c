@@ -85,8 +85,8 @@ internal TilemapPosition recanonicalize_position(
         TilemapPosition can_pos) {
     TilemapPosition result = can_pos;
 
-    recanonicalize_coord(tilemap, &result.offset.x, &result.abs_tile_x);
-    recanonicalize_coord(tilemap, &result.offset.y, &result.abs_tile_y);
+    recanonicalize_coord(tilemap, &result.offset_.x, &result.abs_tile_x);
+    recanonicalize_coord(tilemap, &result.offset_.y, &result.abs_tile_y);
 
     return result;
 }
@@ -222,10 +222,18 @@ internal TilemapDifference subtract_tilemap_positions(
     f32 dz = (f32)pos_a.abs_tile_z - (f32)pos_b.abs_tile_z;
 
     dxy = v2_smul(dxy, tile_side_in_meters);
-    dxy = v2_add(dxy, v2_sub(pos_a.offset, pos_b.offset));
+    dxy = v2_add(dxy, v2_sub(pos_a.offset_, pos_b.offset_));
 
     return (TilemapDifference){
         .dxy = dxy,
         .dz = dz,
     };
+}
+
+internal inline TilemapPosition offset(
+        Tilemap *tilemap, 
+        TilemapPosition pos, 
+        v2 offset) {
+    pos.offset_ = v2_add(pos.offset_, offset);
+    return recanonicalize_position(tilemap, pos);
 }
