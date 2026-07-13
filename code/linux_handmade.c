@@ -22,6 +22,7 @@
 
 global bool global_game_running = true;
 global bool global_pause = false;
+global bool global_fullscreen = false;
 global u64 performance_frequency;
 
 internal inline f64 sdl_get_seconds_elapsed(u64 start_counter,
@@ -535,6 +536,11 @@ internal bool sdl_handle_event(SDL_Event *event, SDLBackbuffer *backbuffer,
 
         case SDLK_RETURN: {
             global_game_running = false;
+        } break;
+
+        case SDLK_F1: {
+            if (key_event.type == SDL_KEYDOWN)
+                global_fullscreen = !global_fullscreen;
         } break;
 
 #if HANDMADE_INTERNAL
@@ -1337,7 +1343,7 @@ int main(void) {
             // NOTE(fede): if we want hacky fullscreen, change &dest_rect -> 0. 
             //      It stretches the texture to the entire screen.
             if (SDL_RenderCopy(backbuffer.renderer, backbuffer.texture, 0,
-                               &dest_rect) < 0) {
+                               global_fullscreen ? 0 : &dest_rect) < 0) {
                 // TODO(fede): Render texture failure
             }
 

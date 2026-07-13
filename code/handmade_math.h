@@ -49,7 +49,7 @@ internal inline v2 v2_vmul(v2 a, v2 b) {
     };
 }
 
-internal inline v2 v2_neg(v2 a, f32 m) {
+internal inline v2 v2_neg(v2 a) {
     return (v2){
         -a.x,
         -a.y,
@@ -74,6 +74,10 @@ internal inline v2 v2_norm(v2 v) {
 
 internal inline f32 square(f32 a) {
     return a * a;
+}
+
+internal inline v2 reflect(v2 a, v2 normal, f32 bounce) {
+    return v2_add(a, v2_smul(normal, (1 + bounce) * v2_dot(a, v2_neg(normal))));
 }
 
 #endif // HANDMADE_MATH_H

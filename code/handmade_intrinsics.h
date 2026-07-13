@@ -13,6 +13,11 @@ internal inline int floor_f32_to_int(f32 a) {
     // return a < 0 ? (int)(a)-1 : (int)(a); 
 }
 
+internal inline int ceil_f32_to_int(f32 a) {
+    return ceilf(a);
+    // return a < 0 ? (int)(a)-1 : (int)(a); 
+}
+
 internal inline int truncate_f32_to_int(f32 a) {
     return (int)(a);
 }
@@ -37,7 +42,7 @@ internal inline f32 sqrt_f32(f32 a) {
     return sqrtf(a);
 }
 
-internal inline i32 sign_i32(i32 val) {
+internal inline int sign_int(int val) {
     return (val > 0) - (val < 0);
 }
 

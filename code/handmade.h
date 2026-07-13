@@ -85,13 +85,16 @@ typedef struct {
     bool exists;
     TilemapPosition p;
     v2 d_p;
-    f32 t;
 
     f32 width;
     f32 height;
 
     u32 facing_direction;
     f32 speed;
+
+    // TODO(fede): remove after debugging 
+    u32 tiles_checked;
+    TilemapPosition tiles_checked_for_collision[100];    
 } Entity;
 
 typedef struct {
