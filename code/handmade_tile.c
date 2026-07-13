@@ -130,9 +130,11 @@ internal u32 get_tile_value_at_pos(Tilemap *tilemap, TilemapPosition pos) {
 }
 
 internal bool is_tile_value_empty(u32 tile_value) {
-    return tile_value == 1 || 
-           tile_value == 3 ||
-           tile_value == 4;
+    return 
+        tile_value == 0 || // NOTE(fede): VOID is empty (walkable)
+        tile_value == 1 || 
+        tile_value == 3 ||
+        tile_value == 4;
 }
 
 internal bool is_tilemap_point_empty(Tilemap *tilemap, TilemapPosition tilemap_pos) {
@@ -174,25 +176,37 @@ internal bool are_on_same_tile(
            pos_a.abs_tile_z == pos_b.abs_tile_z;
 } 
 
+internal i32 get_room(
+        i32 room_side,
+        u32 abs_tile) {
+    i32 signed_tile_pos = (i32)abs_tile;
+    return floor_f32_to_int(signed_tile_pos / (f32)room_side);
+}
+
 internal bool are_on_same_room(
-        u32 room_width, u32 room_height,
+        i32 room_width, i32 room_height,
         TilemapPosition pos_a,
         TilemapPosition pos_b) {
-    return pos_a.abs_tile_x / room_width == pos_b.abs_tile_x / room_width &&
-           pos_a.abs_tile_y / room_height == pos_b.abs_tile_y / room_height &&
+    return get_room(room_width, pos_a.abs_tile_x) == get_room(room_width, pos_b.abs_tile_x) && 
+           get_room(room_height, pos_a.abs_tile_y) == get_room(room_height, pos_b.abs_tile_y) && 
            pos_a.abs_tile_z == pos_b.abs_tile_z;
 } 
 
 internal TilemapPosition get_room_center(
-        u32 room_width, u32 room_height,
+        i32 room_width, i32 room_height,
         TilemapPosition position_in_room) {
-    u32 room_x = position_in_room.abs_tile_x / room_width;
-    u32 room_y = position_in_room.abs_tile_y / room_height;
-    return (TilemapPosition){
-        .abs_tile_x = room_x * room_width + room_width / 2,
-        .abs_tile_y = room_y * room_height + room_height / 2,
+    i32 room_x = get_room(room_width, position_in_room.abs_tile_x);
+    i32 room_y = get_room(room_height, position_in_room.abs_tile_y);
+    
+    i32 signed_abs_tile_x = room_x * room_width + room_width / 2;
+    i32 signed_abs_tile_y = room_y * room_height + room_height / 2;
+    TilemapPosition result = {
+        .abs_tile_x = (u32)signed_abs_tile_x,
+        .abs_tile_y = (u32)signed_abs_tile_y,
         .abs_tile_z = position_in_room.abs_tile_z,
     };
+
+    return result;
 }
 
 internal TilemapDifference subtract_tilemap_positions(
@@ -201,8 +215,8 @@ internal TilemapDifference subtract_tilemap_positions(
         TilemapPosition pos_b) {
 
     v2 dxy = {
-        (f32)pos_a.abs_tile_x - (f32)pos_b.abs_tile_x,
-        (f32)pos_a.abs_tile_y - (f32)pos_b.abs_tile_y,
+        (i32)(pos_a.abs_tile_x - pos_b.abs_tile_x),
+        (i32)(pos_a.abs_tile_y - pos_b.abs_tile_y),
     };
 
     f32 dz = (f32)pos_a.abs_tile_z - (f32)pos_b.abs_tile_z;

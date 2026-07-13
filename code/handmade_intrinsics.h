@@ -37,6 +37,10 @@ internal inline f32 sqrt_f32(f32 a) {
     return sqrtf(a);
 }
 
+internal inline i32 sign_i32(i32 val) {
+    return (val > 0) - (val < 0);
+}
+
 typedef struct {
     u32 index;
     bool found;
