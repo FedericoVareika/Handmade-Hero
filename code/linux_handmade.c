@@ -23,6 +23,7 @@
 global bool global_game_running = true;
 global bool global_pause = false;
 global bool global_fullscreen = false;
+global bool global_reset_input = false;
 global u64 performance_frequency;
 
 internal inline f64 sdl_get_seconds_elapsed(u64 start_counter,
@@ -388,6 +389,7 @@ internal void linux_begin_input_playback(LinuxState *state, int playing_index) {
 internal void linux_end_input_playback(LinuxState *state) {
     state->bytes_read = 0;
     state->playing_index = 0;
+    global_reset_input = true;
 }
 
 internal void linux_record_input(LinuxState *state, GameInput *recording_input) {
@@ -1131,6 +1133,13 @@ int main(void) {
     while (global_game_running) {
         new_input->dt_for_frame = target_seconds_per_frame;
 
+        if (global_reset_input) {
+            *old_input = (GameInput){};
+            *new_input = (GameInput){};
+            global_reset_input = false;
+        }
+            
+
         if (linux_game_has_changed(&game, game_dll_filename)) {
             linux_reload_gamelib(&game, game_dll_filename);
             if (!game.is_valid) {
@@ -1287,9 +1296,6 @@ int main(void) {
         sdl_fill_sound_buffer(&ring_buffer, &sound_output, &game_sound_buffer,
                               write_marker);
 
-        // TODO(fede): This is probably copying the entire struct 3 times,
-        //             check if these should be pointers instead (like casey
-        //             did)
         GameInput *temp = new_input;
         new_input = old_input;
         old_input = temp;
