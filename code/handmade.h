@@ -81,20 +81,42 @@ typedef struct {
     u32 align_y;
 } HeroBitmaps;
 
-typedef struct {
-    bool exists;
-    TilemapPosition p;
-    v2 d_p;
+typedef enum {
+    EntityResidency_nonexistant,
+    EntityResidency_dormant,
+    EntityResidency_low,
+    EntityResidency_high,
 
+    EntityResidency_count,
+} EntityResidency;
+
+typedef struct {
+    TilemapPosition p;
     f32 width;
     f32 height;
 
+    bool collides;
+    u32 d_abs_tile_z;
+} DormantEntity;
+
+typedef struct {
+} LowEntity;
+
+typedef struct {
+    v2 p;                   // NOTE(fede): Relative to camera 
+    v2 d_p;
+    u32 abs_tile_z;
+
     u32 facing_direction;
     f32 speed;
+} HighEntity;
 
-    // TODO(fede): remove after debugging 
-    u32 tiles_checked;
-    TilemapPosition tiles_checked_for_collision[100];    
+typedef struct {
+    u32 idx;
+    EntityResidency residency;
+    DormantEntity *dormant;
+    LowEntity *low;
+    HighEntity *high;
 } Entity;
 
 typedef struct {
@@ -106,8 +128,13 @@ typedef struct {
 
 
     u32 player_index_for_controller[HANDMADE_MAX_INPUTS];
+
+#define MAX_ENTITIES 256
     u32 entity_count;
-    Entity entities[256]; // array_count(((GameInput *)0)->controllers)
+    EntityResidency entity_residencies[MAX_ENTITIES];
+    DormantEntity   dormant_entities[MAX_ENTITIES];
+    LowEntity       low_entities[MAX_ENTITIES];
+    HighEntity      high_entities[MAX_ENTITIES];
 
     LoadedBitmap backdrop;
 
