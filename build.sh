@@ -7,6 +7,8 @@ common_flags_external="-DHANDMADE_SLOW=0 -DHANDMADE_INTERNAL=0 -ffile-prefix-map
 
 linker_flags="$(sdl2-config --cflags --libs) -lm -ldl"
 
+ctags --recurse=yes --exclude=.git --exclude=build --exclude=data
+
 mkdir -p build
 
 gcc -std=gnu11 \

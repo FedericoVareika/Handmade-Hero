@@ -119,7 +119,7 @@ typedef struct {
             GameButton back;
             GameButton start;
 
-            GameButton _end;
+            GameButton end_;
         };
     };
 } GameControllerInput;
@@ -138,7 +138,7 @@ typedef struct {
             GameButton thumb1; // thumb - back
             GameButton thumb2; // thumb - forwards
 
-            GameButton _end;
+            GameButton end_;
         };
     };
 } MouseInput;

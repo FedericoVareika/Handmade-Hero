@@ -80,4 +80,42 @@ internal inline v2 reflect(v2 a, v2 normal, f32 bounce) {
     return v2_add(a, v2_smul(normal, (1 + bounce) * v2_dot(a, v2_neg(normal))));
 }
 
+typedef struct {
+    v2 min, max;
+} Rect2;
+
+internal inline Rect2 rect2_min_max(v2 min, v2 max) {
+    return (Rect2){
+        .min = min,
+        .max = max,
+    };
+}
+
+internal inline Rect2 rect2_min_dim(v2 min, v2 dim) {
+    return (Rect2){
+        .min = min,
+        .max = v2_add(min, dim),
+    };
+}
+
+internal inline Rect2 rect2_center_halfdim(v2 center, v2 halfdim) {
+    return (Rect2){
+        .min = v2_sub(center, halfdim),
+        .max = v2_add(center, halfdim),
+    };
+}
+
+internal inline Rect2 rect2_center_dim(v2 center, v2 dim) {
+    v2 halfdim = v2_smul(dim, 0.5);
+    return rect2_center_halfdim(center, halfdim);
+}
+
+internal inline bool inside_rect2(Rect2 rect, v2 test) {
+    return 
+        rect.min.x <= test.x && 
+        rect.min.y <= test.y && 
+        rect.max.x > test.x && 
+        rect.max.y > test.y;
+}
+
 #endif // HANDMADE_MATH_H

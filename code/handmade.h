@@ -1,6 +1,11 @@
 #ifndef HANDMADE_H
 #define HANDMADE_H
 
+/* TODO_LIST(fede):
+ *  - Agregar un pato  
+ *
+ * */
+
 /*
  * NOTE(fede):
  *
@@ -82,15 +87,24 @@ typedef struct {
 } HeroBitmaps;
 
 typedef enum {
-    EntityResidency_nonexistant,
-    EntityResidency_dormant,
-    EntityResidency_low,
-    EntityResidency_high,
+    EntityResidence_nonexistant,
+    EntityResidence_dormant,
+    EntityResidence_low,
+    EntityResidence_high,
 
-    EntityResidency_count,
-} EntityResidency;
+    EntityResidence_count,
+} EntityResidence;
+
+typedef enum {
+    EntityType_none,
+    EntityType_hero,
+    EntityType_wall,
+    EntityType_ladder,
+} EntityType;
 
 typedef struct {
+    EntityType type;
+
     TilemapPosition p;
     f32 width;
     f32 height;
@@ -113,7 +127,7 @@ typedef struct {
 
 typedef struct {
     u32 idx;
-    EntityResidency residency;
+    EntityResidence residence;
     DormantEntity *dormant;
     LowEntity *low;
     HighEntity *high;
@@ -131,7 +145,7 @@ typedef struct {
 
 #define MAX_ENTITIES 256
     u32 entity_count;
-    EntityResidency entity_residencies[MAX_ENTITIES];
+    EntityResidence entity_residencies[MAX_ENTITIES];
     DormantEntity   dormant_entities[MAX_ENTITIES];
     LowEntity       low_entities[MAX_ENTITIES];
     HighEntity      high_entities[MAX_ENTITIES];
@@ -140,6 +154,8 @@ typedef struct {
 
     HeroBitmaps hero_bitmaps[4];
     LoadedBitmap hero_shadow;
+
+    f32 tile_side_in_pixels;
 } GameState;
 
 #endif //HANDMADE_H

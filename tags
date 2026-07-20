@@ -1,0 +1,447 @@
+!_TAG_FILE_FORMAT	2	/extended format; --format=1 will not append ;" to lines/
+!_TAG_FILE_SORTED	1	/0=unsorted, 1=sorted, 2=foldcase/
+!_TAG_PROGRAM_AUTHOR	Darren Hiebert	/dhiebert@users.sourceforge.net/
+!_TAG_PROGRAM_NAME	Exuberant Ctags	//
+!_TAG_PROGRAM_URL	http://ctags.sourceforge.net	/official site/
+!_TAG_PROGRAM_VERSION	5.9~svn20110310	//
+Arena	code/handmade_arena.h	/^} Arena;$/;"	t	typeref:struct:__anon34
+BUTTON_HOLD	code/handmade.c	824;"	d	file:
+BUTTON_TAP	code/handmade.c	823;"	d	file:
+BmpBitfieldsMasks	code/handmade.c	/^} BmpBitfieldsMasks;$/;"	t	typeref:struct:__anon3	file:
+BmpDIBHeader	code/handmade.c	/^} BmpDIBHeader;$/;"	t	typeref:struct:__anon2	file:
+BmpFileHeader	code/handmade.c	/^} BmpFileHeader;$/;"	t	typeref:struct:__anon1	file:
+BmpHeader	code/handmade.c	/^} BmpHeader;$/;"	t	typeref:struct:__anon4	file:
+COMPILER_CLANG	code/handmade_platform.h	11;"	d
+COMPILER_GCC	code/handmade_platform.h	9;"	d
+DEBUGPlatformFreeEntireFileMemory	code/handmade_platform.h	/^typedef DEBUG_PLATFORM_FREE_FILE_MEMORY(DEBUGPlatformFreeEntireFileMemory);$/;"	t
+DEBUGPlatformReadEntireFile	code/handmade_platform.h	/^typedef DEBUG_PLATFORM_READ_ENTIRE_FILE(DEBUGPlatformReadEntireFile);$/;"	t
+DEBUGPlatformWriteEntireFile	code/handmade_platform.h	/^typedef DEBUG_PLATFORM_WRITE_ENTIRE_FILE(DEBUGPlatformWriteEntireFile);$/;"	t
+DEBUG_PLATFORM_FREE_FILE_MEMORY	code/handmade_platform.h	59;"	d
+DEBUG_PLATFORM_FREE_FILE_MEMORY	code/linux_handmade.c	/^internal DEBUG_PLATFORM_FREE_FILE_MEMORY(debug_platform_free_file_memory) {$/;"	f
+DEBUG_PLATFORM_READ_ENTIRE_FILE	code/handmade_platform.h	55;"	d
+DEBUG_PLATFORM_READ_ENTIRE_FILE	code/linux_handmade.c	/^internal DEBUG_PLATFORM_READ_ENTIRE_FILE(debug_platform_read_entire_file) {$/;"	f
+DEBUG_PLATFORM_WRITE_ENTIRE_FILE	code/handmade_platform.h	63;"	d
+DEBUG_PLATFORM_WRITE_ENTIRE_FILE	code/linux_handmade.c	/^internal DEBUG_PLATFORM_WRITE_ENTIRE_FILE(debug_platform_write_entire_file) {$/;"	f
+DebugReadFileResult	code/handmade_platform.h	/^} DebugReadFileResult;$/;"	t	typeref:struct:__anon7
+DormantEntity	code/handmade.h	/^} DormantEntity;$/;"	t	typeref:struct:__anon29
+Entity	code/handmade.h	/^} Entity;$/;"	t	typeref:struct:__anon32
+EntityResidence	code/handmade.h	/^} EntityResidence;$/;"	t	typeref:enum:__anon27
+EntityResidence_count	code/handmade.h	/^    EntityResidence_count,$/;"	e	enum:__anon27
+EntityResidence_dormant	code/handmade.h	/^    EntityResidence_dormant,$/;"	e	enum:__anon27
+EntityResidence_high	code/handmade.h	/^    EntityResidence_high,$/;"	e	enum:__anon27
+EntityResidence_low	code/handmade.h	/^    EntityResidence_low,$/;"	e	enum:__anon27
+EntityResidence_nonexistant	code/handmade.h	/^    EntityResidence_nonexistant,$/;"	e	enum:__anon27
+EntityType	code/handmade.h	/^} EntityType;$/;"	t	typeref:enum:__anon28
+EntityType_hero	code/handmade.h	/^    EntityType_hero,$/;"	e	enum:__anon28
+EntityType_ladder	code/handmade.h	/^    EntityType_ladder,$/;"	e	enum:__anon28
+EntityType_none	code/handmade.h	/^    EntityType_none,$/;"	e	enum:__anon28
+EntityType_wall	code/handmade.h	/^    EntityType_wall,$/;"	e	enum:__anon28
+FindBitResult	code/handmade_intrinsics.h	/^} FindBitResult; $/;"	t	typeref:struct:__anon44
+GAME_FILL_SOUND_BUFFER	code/handmade.c	/^extern GAME_FILL_SOUND_BUFFER(game_fill_sound_buffer) {$/;"	f
+GAME_FILL_SOUND_BUFFER	code/handmade_platform.h	180;"	d
+GAME_FILL_SOUND_BUFFER	code/linux_handmade.c	/^GAME_FILL_SOUND_BUFFER(game_fill_sound_buffer_stub) {}$/;"	f
+GAME_UPDATE_AND_RENDER	code/handmade.c	/^extern GAME_UPDATE_AND_RENDER(game_update_and_render) {$/;"	f
+GAME_UPDATE_AND_RENDER	code/handmade_platform.h	173;"	d
+GAME_UPDATE_AND_RENDER	code/linux_handmade.c	/^GAME_UPDATE_AND_RENDER(game_update_and_render_stub) {}$/;"	f
+GET_AXIS	code/linux_handmade.c	18;"	d	file:
+GET_BUTTON	code/linux_handmade.c	16;"	d	file:
+GameButton	code/handmade_platform.h	/^} GameButton;$/;"	t	typeref:struct:__anon11
+GameControllerInput	code/handmade_platform.h	/^} GameControllerInput;$/;"	t	typeref:struct:__anon12
+GameDisplayBuffer	code/handmade_platform.h	/^} GameDisplayBuffer;$/;"	t	typeref:struct:__anon8
+GameFillSoundBuffer	code/handmade_platform.h	/^typedef GAME_FILL_SOUND_BUFFER(GameFillSoundBuffer);$/;"	t
+GameInput	code/handmade_platform.h	/^} GameInput;$/;"	t	typeref:struct:__anon18
+GameLib	code/linux_handmade.h	/^} GameLib;$/;"	t	typeref:struct:__anon36
+GameMemory	code/handmade_platform.h	/^} GameMemory;$/;"	t	typeref:struct:__anon19
+GameSoundOutput	code/handmade_platform.h	/^} GameSoundOutput;$/;"	t	typeref:struct:__anon10
+GameSoundOutputBuffer	code/handmade_platform.h	/^} GameSoundOutputBuffer;$/;"	t	typeref:struct:__anon9
+GameState	code/handmade.h	/^} GameState;$/;"	t	typeref:struct:__anon33
+GameUpdateAndRender	code/handmade_platform.h	/^typedef GAME_UPDATE_AND_RENDER(GameUpdateAndRender);$/;"	t
+HANDMADE_ARENA_H	code/handmade_arena.h	2;"	d
+HANDMADE_ASSERT	code/handmade.h	34;"	d
+HANDMADE_ASSERT	code/handmade.h	43;"	d
+HANDMADE_H	code/handmade.h	2;"	d
+HANDMADE_INTRINSICS_H	code/handmade_intrinsics.h	2;"	d
+HANDMADE_MATH_H	code/handmade_math.h	2;"	d
+HANDMADE_MAX_INPUTS	code/handmade_platform.h	146;"	d
+HANDMADE_PLATFORM_H	code/handmade_platform.h	2;"	d
+HANDMADE_RANDOM_H	code/handmade_random.h	2;"	d
+HANDMADE_TILE_H	code/handmade_tile.h	2;"	d
+HeroBitmaps	code/handmade.h	/^} HeroBitmaps;$/;"	t	typeref:struct:__anon26
+HighEntity	code/handmade.h	/^} HighEntity;$/;"	t	typeref:struct:__anon31
+LINUX_FILEPATH_MAX_COUNT	code/linux_handmade.h	77;"	d
+LINUX_HANDMADE_H	code/linux_handmade.h	2;"	d
+LinuxState	code/linux_handmade.h	/^} LinuxState;$/;"	t	typeref:struct:__anon43
+LoadedBitmap	code/handmade.h	/^} LoadedBitmap;$/;"	t	typeref:struct:__anon25
+LowEntity	code/handmade.h	/^} LowEntity;$/;"	t	typeref:struct:__anon30
+MAX_CONTROLLERS	code/linux_handmade.h	10;"	d
+MAX_ENTITIES	code/handmade.h	146;"	d
+MemoryIndex	code/handmade_platform.h	/^typedef size_t MemoryIndex; $/;"	t
+MouseInput	code/handmade_platform.h	/^} MouseInput;$/;"	t	typeref:struct:__anon15
+PI	code/handmade.h	48;"	d
+Rect2	code/handmade_math.h	/^} Rect2;$/;"	t	typeref:struct:__anon23
+SDLAudioRingBuffer	code/linux_handmade.h	/^} SDLAudioRingBuffer;$/;"	t	typeref:struct:__anon38
+SDLBackbuffer	code/linux_handmade.h	/^} SDLBackbuffer;$/;"	t	typeref:struct:__anon37
+SDLControllers	code/linux_handmade.h	/^} SDLControllers;$/;"	t	typeref:struct:__anon40
+SDLDebugTimeMarker	code/linux_handmade.h	/^} SDLDebugTimeMarker;$/;"	t	typeref:struct:__anon42
+SDLSoundOutput	code/linux_handmade.h	/^} SDLSoundOutput;$/;"	t	typeref:struct:__anon39
+SDLSoundWriteMarker	code/linux_handmade.h	/^} SDLSoundWriteMarker;$/;"	t	typeref:struct:__anon41
+TILEMAP_HEIGHT	code/handmade_tile.h	5;"	d
+TILEMAP_WIDTH	code/handmade_tile.h	4;"	d
+ThreadContext	code/handmade_platform.h	/^} ThreadContext;$/;"	t	typeref:struct:__anon6
+TileChunk	code/handmade_tile.h	/^} TileChunk;$/;"	t	typeref:struct:__anon45
+TileChunkPosition	code/handmade_tile.h	/^} TileChunkPosition;$/;"	t	typeref:struct:__anon47
+Tilemap	code/handmade_tile.h	/^} Tilemap;$/;"	t	typeref:struct:__anon46
+TilemapDifference	code/handmade_tile.h	/^} TilemapDifference;$/;"	t	typeref:struct:__anon49
+TilemapPosition	code/handmade_tile.h	/^} TilemapPosition;$/;"	t	typeref:struct:__anon48
+UPDATE_FACING_DIR	code/handmade.c	909;"	d	file:
+UPDATE_FACING_DIR	code/handmade.c	918;"	d	file:
+World	code/handmade.h	/^} World;$/;"	t	typeref:struct:__anon24
+XBackbuffer	code/x11_pulse_handmade.c	/^} XBackbuffer;$/;"	t	typeref:struct:__anon35	file:
+a	code/handmade.c	/^    u32 r, g, b, a;$/;"	m	struct:__anon3	file:
+abs	code/handmade.h	57;"	d
+abs_f32	code/handmade_intrinsics.h	/^internal inline f32 abs_f32(f32 a) {$/;"	f
+abs_tile_x	code/handmade_tile.h	/^    u32 abs_tile_x;$/;"	m	struct:__anon48
+abs_tile_y	code/handmade_tile.h	/^    u32 abs_tile_y;$/;"	m	struct:__anon48
+abs_tile_z	code/handmade.h	/^    u32 abs_tile_z;$/;"	m	struct:__anon31
+abs_tile_z	code/handmade_tile.h	/^    u32 abs_tile_z;$/;"	m	struct:__anon48
+add_entity	code/handmade.c	/^internal u32 add_entity(GameState *game_state) {$/;"	f
+align_x	code/handmade.h	/^    u32 align_x;$/;"	m	struct:__anon26
+align_y	code/handmade.h	/^    u32 align_y;$/;"	m	struct:__anon26
+are_on_same_room	code/handmade_tile.c	/^internal bool are_on_same_room($/;"	f
+are_on_same_tile	code/handmade_tile.c	/^internal bool are_on_same_tile($/;"	f
+array_count	code/handmade.h	59;"	d
+assert	code/handmade.h	36;"	d
+assert	code/handmade.h	44;"	d
+atan2_f32	code/handmade_intrinsics.h	/^internal inline f32 atan2_f32(f32 y, f32 x) {$/;"	f
+avg_stick_x	code/handmade_platform.h	/^    f32 avg_stick_x;$/;"	m	struct:__anon12
+avg_stick_y	code/handmade_platform.h	/^    f32 avg_stick_y;$/;"	m	struct:__anon12
+b	code/handmade.c	/^    u32 r, g, b, a;$/;"	m	struct:__anon3	file:
+back	code/handmade_platform.h	/^            GameButton back;$/;"	m	struct:__anon12::__anon13::__anon14
+backdrop	code/handmade.h	/^    LoadedBitmap backdrop;$/;"	m	struct:__anon33
+base	code/handmade_arena.h	/^    u8 *base;$/;"	m	struct:__anon34
+bitmap_pixel_height	code/handmade.c	/^    i32 bitmap_pixel_height;$/;"	m	struct:__anon2	file:
+bitmap_pixel_width	code/handmade.c	/^    i32 bitmap_pixel_width;$/;"	m	struct:__anon2	file:
+bits_per_pixel	code/handmade.c	/^    u16 bits_per_pixel;$/;"	m	struct:__anon2	file:
+bits_per_pixel	code/linux_handmade.h	/^    u32 bits_per_pixel;$/;"	m	struct:__anon37
+bits_per_pixel	code/x11_pulse_handmade.c	/^    u32 bits_per_pixel;$/;"	m	struct:__anon35	file:
+bool	code/handmade_platform.h	/^typedef enum { false, true } bool;$/;"	t	typeref:enum:__anon5
+button_a	code/handmade_platform.h	/^            GameButton button_a;$/;"	m	struct:__anon12::__anon13::__anon14
+button_b	code/handmade_platform.h	/^            GameButton button_b;$/;"	m	struct:__anon12::__anon13::__anon14
+button_x	code/handmade_platform.h	/^            GameButton button_x;$/;"	m	struct:__anon12::__anon13::__anon14
+button_y	code/handmade_platform.h	/^            GameButton button_y;$/;"	m	struct:__anon12::__anon13::__anon14
+buttons	code/handmade_platform.h	/^        GameButton buttons[12];$/;"	m	union:__anon12::__anon13
+buttons	code/handmade_platform.h	/^        GameButton buttons[5];$/;"	m	union:__anon15::__anon16
+byte_to_lock	code/linux_handmade.h	/^    int byte_to_lock; $/;"	m	struct:__anon41
+byte_to_lock	code/linux_handmade.h	/^    int byte_to_lock;$/;"	m	struct:__anon42
+bytes_per_sample	code/linux_handmade.h	/^    int bytes_per_sample;$/;"	m	struct:__anon39
+bytes_per_sound_frame	code/linux_handmade.h	/^    int bytes_per_sound_frame;$/;"	m	struct:__anon39
+bytes_read	code/linux_handmade.h	/^    u64 bytes_read;$/;"	m	struct:__anon43
+bytes_to_write	code/linux_handmade.h	/^    int bytes_to_write; $/;"	m	struct:__anon41
+bytes_to_write	code/linux_handmade.h	/^    int bytes_to_write;$/;"	m	struct:__anon42
+bytes_written	code/linux_handmade.h	/^    u64 bytes_written;$/;"	m	struct:__anon43
+camera_following_entity_index	code/handmade.h	/^    u32 camera_following_entity_index;$/;"	m	struct:__anon33
+camera_pos	code/handmade.h	/^    TilemapPosition camera_pos;$/;"	m	struct:__anon33
+capacity	code/x11_pulse_handmade.c	/^    u32 capacity;$/;"	m	struct:__anon35	file:
+cape	code/handmade.h	/^    LoadedBitmap cape;$/;"	m	struct:__anon26
+cat_strings	code/linux_handmade.c	/^internal void cat_strings(int source_a_count, char *source_a,$/;"	f
+ceil_f32_to_int	code/handmade_intrinsics.h	/^internal inline int ceil_f32_to_int(f32 a) {$/;"	f
+change_entity_residence	code/handmade.c	/^internal inline void change_entity_residence($/;"	f
+chunk_dim	code/handmade_tile.h	/^    u32 chunk_dim;$/;"	m	struct:__anon46
+chunk_mask	code/handmade_tile.h	/^    u32 chunk_mask;$/;"	m	struct:__anon46
+chunk_shift	code/handmade_tile.h	/^    u32 chunk_shift;$/;"	m	struct:__anon46
+closest_point_in_rectangle	code/handmade.c	/^internal v2 closest_point_in_rectangle(v2 min_corner,$/;"	f
+collides	code/handmade.h	/^    bool collides;$/;"	m	struct:__anon29
+compression	code/handmade.c	/^    u32 compression;            \/\/ 0 if BI_RGB (most common)$/;"	m	struct:__anon2	file:
+controllers	code/handmade_platform.h	/^    GameControllerInput controllers[HANDMADE_MAX_INPUTS];$/;"	m	struct:__anon18
+cos_f32	code/handmade_intrinsics.h	/^internal inline f32 cos_f32(f32 angle) {$/;"	f
+count	code/linux_handmade.h	/^    int count;$/;"	m	struct:__anon40
+d_abs_tile_z	code/handmade.h	/^    u32 d_abs_tile_z;$/;"	m	struct:__anon29
+d_p	code/handmade.h	/^    v2 d_p;$/;"	m	struct:__anon31
+data	code/handmade_platform.h	/^    u32 *data;$/;"	m	struct:__anon8
+data	code/linux_handmade.h	/^    i16 *data;$/;"	m	struct:__anon38
+data	code/linux_handmade.h	/^    u32 *data;$/;"	m	struct:__anon37
+data	code/x11_pulse_handmade.c	/^    u32 *data;$/;"	m	struct:__anon35	file:
+data_capacity	code/linux_handmade.h	/^    u32 data_capacity;$/;"	m	struct:__anon37
+data_offset	code/handmade.c	/^    u32 data_offset;$/;"	m	struct:__anon1	file:
+debug_draw_bmp	code/handmade.c	/^internal void debug_draw_bmp(LoadedBitmap *bitmap,$/;"	f
+debug_draw_bmp_align	code/handmade.c	197;"	d	file:
+debug_draw_pixel	code/handmade.c	/^internal void debug_draw_pixel(u32 *pixel, u32 value) {$/;"	f
+debug_load_bmp	code/handmade.c	/^internal LoadedBitmap debug_load_bmp(ThreadContext *thread,$/;"	f
+debug_platform_free_file_memory	code/handmade_platform.h	/^    DEBUGPlatformFreeEntireFileMemory *debug_platform_free_file_memory;$/;"	m	struct:__anon19
+debug_platform_read_entire_file	code/handmade_platform.h	/^    DEBUGPlatformReadEntireFile *debug_platform_read_entire_file;$/;"	m	struct:__anon19
+debug_platform_write_entire_file	code/handmade_platform.h	/^    DEBUGPlatformWriteEntireFile *debug_platform_write_entire_file;$/;"	m	struct:__anon19
+debug_time_marker	code/linux_handmade.c	/^global SDLDebugTimeMarker debug_time_marker = {};$/;"	v
+dib_header	code/handmade.c	/^    BmpDIBHeader dib_header;$/;"	m	struct:__anon4	file:
+dib_header_size	code/handmade.c	/^    u32 dib_header_size;        \/\/ 40$/;"	m	struct:__anon2	file:
+dormant	code/handmade.h	/^    DormantEntity *dormant;$/;"	m	struct:__anon32
+dormant_entities	code/handmade.h	/^    DormantEntity   dormant_entities[MAX_ENTITIES];$/;"	m	struct:__anon33
+draw_rectangle	code/handmade.c	/^internal void draw_rectangle(GameDisplayBuffer *buffer,$/;"	f
+draw_rectangle_rgba	code/handmade.c	/^internal void draw_rectangle_rgba(GameDisplayBuffer *buffer,$/;"	f
+dt_for_frame	code/handmade_platform.h	/^    f32 dt_for_frame;$/;"	m	struct:__anon18
+dxy	code/handmade_tile.h	/^    v2 dxy;$/;"	m	struct:__anon49
+dz	code/handmade_tile.h	/^    f32 dz;$/;"	m	struct:__anon49
+e	code/handmade_math.h	/^        f32 e[2];$/;"	m	union:__anon20::__anon21
+end_	code/handmade_platform.h	/^            GameButton end_;$/;"	m	struct:__anon12::__anon13::__anon14
+end_	code/handmade_platform.h	/^            GameButton end_;$/;"	m	struct:__anon15::__anon16::__anon17
+ended_down	code/handmade_platform.h	/^    bool ended_down;$/;"	m	struct:__anon11
+entity_count	code/handmade.h	/^    u32 entity_count;$/;"	m	struct:__anon33
+entity_residencies	code/handmade.h	/^    EntityResidence entity_residencies[MAX_ENTITIES];$/;"	m	struct:__anon33
+exe_filename	code/linux_handmade.h	/^    char exe_filename[LINUX_FILEPATH_MAX_COUNT];$/;"	m	struct:__anon43
+expected_frame_boundary_byte	code/linux_handmade.h	/^    int expected_frame_boundary_byte;$/;"	m	struct:__anon42
+expected_now_byte	code/linux_handmade.h	/^    int expected_now_byte;$/;"	m	struct:__anon42
+f32	code/handmade_platform.h	/^typedef float f32;$/;"	t
+f64	code/handmade_platform.h	/^typedef double f64;$/;"	t
+facing_direction	code/handmade.h	/^    u32 facing_direction;$/;"	m	struct:__anon31
+false	code/handmade_platform.h	/^typedef enum { false, true } bool;$/;"	e	enum:__anon5
+file_header	code/handmade.c	/^    BmpFileHeader file_header;$/;"	m	struct:__anon4	file:
+filename	code/linux_handmade.h	/^    char *filename;$/;"	m	struct:__anon36
+filesize	code/handmade.c	/^    u32 filesize;$/;"	m	struct:__anon1	file:
+filetype	code/handmade.c	/^    u16 filetype;$/;"	m	struct:__anon1	file:
+fill_audio_buffer	code/handmade.c	/^internal void fill_audio_buffer(GameSoundOutputBuffer *buffer, int tone_hz) {$/;"	f
+fill_sound_buffer	code/linux_handmade.h	/^    GameFillSoundBuffer *fill_sound_buffer;$/;"	m	struct:__anon36
+find_least_significant_set_bit	code/handmade_intrinsics.h	/^internal inline FindBitResult find_least_significant_set_bit(u32 mask) {$/;"	f
+flip_play_cursor	code/linux_handmade.h	/^    int flip_play_cursor;$/;"	m	struct:__anon42
+flip_write_cursor	code/linux_handmade.h	/^    int flip_write_cursor;$/;"	m	struct:__anon42
+floor_f32_to_int	code/handmade_intrinsics.h	/^internal inline int floor_f32_to_int(f32 a) {$/;"	f
+found	code/handmade_intrinsics.h	/^    bool found;$/;"	m	struct:__anon44
+frames_of_audio_latency	code/linux_handmade.c	21;"	d	file:
+g	code/handmade.c	/^    u32 r, g, b, a;$/;"	m	struct:__anon3	file:
+game_memory_block	code/linux_handmade.h	/^    void *game_memory_block; $/;"	m	struct:__anon43
+game_memory_size	code/linux_handmade.h	/^    u64 game_memory_size;$/;"	m	struct:__anon43
+get_chunk_position_for	code/handmade_tile.c	/^internal inline TileChunkPosition get_chunk_position_for($/;"	f
+get_entity	code/handmade.c	/^internal inline Entity get_entity($/;"	f
+get_entity_residence	code/handmade.c	/^internal inline EntityResidence get_entity_residence($/;"	f
+get_game_controller	code/handmade.h	/^internal inline GameControllerInput *get_game_controller(GameInput *input,$/;"	f
+get_room	code/handmade_tile.c	/^internal i32 get_room($/;"	f
+get_room_center	code/handmade_tile.c	/^internal TilemapPosition get_room_center($/;"	f
+get_tile_value	code/handmade_tile.c	/^internal u32 get_tile_value($/;"	f
+get_tile_value_at_pos	code/handmade_tile.c	/^internal u32 get_tile_value_at_pos(Tilemap *tilemap, TilemapPosition pos) {$/;"	f
+get_tile_value_unchecked	code/handmade_tile.c	/^internal u32 get_tile_value_unchecked($/;"	f
+get_tilechunk	code/handmade_tile.c	/^internal TileChunk *get_tilechunk(Tilemap *tilemap, TileChunkPosition chunk_pos) {$/;"	f
+gigabytes	code/handmade.h	52;"	d
+global	code/handmade_platform.h	19;"	d
+global_fullscreen	code/linux_handmade.c	/^global bool global_fullscreen = false;$/;"	v
+global_game_running	code/linux_handmade.c	/^global bool global_game_running = true;$/;"	v
+global_pause	code/linux_handmade.c	/^global bool global_pause = false;$/;"	v
+global_reset_input	code/linux_handmade.c	/^global bool global_reset_input = false;$/;"	v
+half_transition_count	code/handmade_platform.h	/^    int half_transition_count;$/;"	m	struct:__anon11
+handle	code/linux_handmade.h	/^    void *handle;$/;"	m	struct:__anon36
+handles	code/linux_handmade.h	/^    SDL_GameController *handles[MAX_CONTROLLERS];$/;"	m	struct:__anon40
+head	code/handmade.h	/^    LoadedBitmap head;$/;"	m	struct:__anon26
+height	code/handmade.h	/^    f32 height;$/;"	m	struct:__anon29
+height	code/handmade.h	/^    i32 height;$/;"	m	struct:__anon25
+height	code/handmade_platform.h	/^    u32 height;$/;"	m	struct:__anon8
+height	code/linux_handmade.h	/^    u32 height;$/;"	m	struct:__anon37
+height	code/x11_pulse_handmade.c	/^    u32 height;$/;"	m	struct:__anon35	file:
+hero_bitmaps	code/handmade.h	/^    HeroBitmaps hero_bitmaps[4];$/;"	m	struct:__anon33
+hero_shadow	code/handmade.h	/^    LoadedBitmap hero_shadow;$/;"	m	struct:__anon33
+high	code/handmade.h	/^    HighEntity *high;$/;"	m	struct:__anon32
+high_entities	code/handmade.h	/^    HighEntity      high_entities[MAX_ENTITIES];$/;"	m	struct:__anon33
+horizontal_resolution	code/handmade.c	/^    i32 horizontal_resolution;  \/\/ pixel per metre$/;"	m	struct:__anon2	file:
+i16	code/handmade_platform.h	/^typedef int16_t i16;$/;"	t
+i32	code/handmade_platform.h	/^typedef int32_t i32;$/;"	t
+i64	code/handmade_platform.h	/^typedef int64_t i64;$/;"	t
+i8	code/handmade_platform.h	/^typedef int8_t i8;$/;"	t
+idx	code/handmade.h	/^    u32 idx;$/;"	m	struct:__anon32
+index	code/handmade_intrinsics.h	/^    u32 index;$/;"	m	struct:__anon44
+initialize_arena	code/handmade_arena.c	/^internal void initialize_arena($/;"	f
+initialize_player	code/handmade.c	/^internal void initialize_player(GameState *game_state, u32 entity_idx) {$/;"	f
+initialize_wall	code/handmade.c	/^internal void initialize_wall($/;"	f
+inside_rect2	code/handmade_math.h	/^internal inline bool inside_rect2(Rect2 rect, v2 test) {$/;"	f
+internal	code/handmade_platform.h	18;"	d
+is_analog	code/handmade_platform.h	/^    bool is_analog;$/;"	m	struct:__anon12
+is_connected	code/handmade_platform.h	/^    bool is_connected;$/;"	m	struct:__anon12
+is_initialized	code/handmade_platform.h	/^    bool is_initialized;$/;"	m	struct:__anon19
+is_tile_value_empty	code/handmade_tile.c	/^internal bool is_tile_value_empty(u32 tile_value) {$/;"	f
+is_tilechunk_point_empty	code/handmade_tile.c	/^internal bool is_tilechunk_point_empty($/;"	f
+is_tilemap_point_empty	code/handmade_tile.c	/^internal bool is_tilemap_point_empty(Tilemap *tilemap, TilemapPosition tilemap_pos) {$/;"	f
+is_valid	code/linux_handmade.h	/^    bool is_valid; $/;"	m	struct:__anon36
+kilobytes	code/handmade.h	50;"	d
+last_consumed_from	code/linux_handmade.h	/^    u64 last_consumed_from;$/;"	m	struct:__anon38
+last_modified	code/linux_handmade.h	/^    struct timespec last_modified;$/;"	m	struct:__anon36	typeref:struct:__anon36::timespec
+left	code/handmade_platform.h	/^            GameButton left;$/;"	m	struct:__anon15::__anon16::__anon17
+left_shoulder	code/handmade_platform.h	/^            GameButton left_shoulder;$/;"	m	struct:__anon12::__anon13::__anon14
+lerp	code/handmade.c	/^internal inline f32 lerp(f32 a, f32 b, f32 t) {$/;"	f
+linux_begin_input_playback	code/linux_handmade.c	/^internal void linux_begin_input_playback(LinuxState *state, int playing_index) {$/;"	f
+linux_begin_recording_input	code/linux_handmade.c	/^internal void linux_begin_recording_input(LinuxState *state,$/;"	f
+linux_build_global_filename_at_exe_location	code/linux_handmade.c	/^internal void linux_build_global_filename_at_exe_location(LinuxState *state,$/;"	f
+linux_end_input_playback	code/linux_handmade.c	/^internal void linux_end_input_playback(LinuxState *state) {$/;"	f
+linux_end_recording_input	code/linux_handmade.c	/^internal void linux_end_recording_input(LinuxState *state) {$/;"	f
+linux_game_has_changed	code/linux_handmade.c	/^internal bool linux_game_has_changed(GameLib *game, char *filename) {$/;"	f
+linux_get_exe_path	code/linux_handmade.c	/^internal void linux_get_exe_path(LinuxState *state) {$/;"	f
+linux_get_input_state_filepath	code/linux_handmade.c	/^internal void linux_get_input_state_filepath(LinuxState *state, char *dest,$/;"	f
+linux_load_gamelib	code/linux_handmade.c	/^internal GameLib linux_load_gamelib(char *filename) {$/;"	f
+linux_playback_input	code/linux_handmade.c	/^internal void linux_playback_input(LinuxState *state,$/;"	f
+linux_record_input	code/linux_handmade.c	/^internal void linux_record_input(LinuxState *state, GameInput *recording_input) {$/;"	f
+linux_reload_gamelib	code/linux_handmade.c	/^internal void linux_reload_gamelib(GameLib *game, char *filename) {$/;"	f
+linux_sleep_to_target	code/linux_handmade.c	/^internal void linux_sleep_to_target(u64 last_counter, f64 target_seconds) {$/;"	f
+linux_unload_gamelib	code/linux_handmade.c	/^internal void linux_unload_gamelib(GameLib *game) {$/;"	f
+local_persist	code/handmade_platform.h	20;"	d
+low	code/handmade.h	/^    LowEntity *low;$/;"	m	struct:__anon32
+low_entities	code/handmade.h	/^    LowEntity       low_entities[MAX_ENTITIES];$/;"	m	struct:__anon33
+main	code/linux_handmade.c	/^int main(void) {$/;"	f
+main	code/x11_pulse_handmade.c	/^int main(void) {$/;"	f
+map_into_tile_space	code/handmade_tile.c	/^internal TilemapPosition map_into_tile_space($/;"	f
+max	code/handmade.h	55;"	d
+max	code/handmade_math.h	/^    v2 min, max;$/;"	m	struct:__anon23
+megabytes	code/handmade.h	51;"	d
+memory	code/handmade_platform.h	/^    void *memory;$/;"	m	struct:__anon7
+memory_map	code/linux_handmade.h	/^    void *memory_map;$/;"	m	struct:__anon43
+memory_map_size	code/linux_handmade.h	/^    u64 memory_map_size;$/;"	m	struct:__anon43
+middle	code/handmade_platform.h	/^            GameButton middle;$/;"	m	struct:__anon15::__anon16::__anon17
+min	code/handmade.h	56;"	d
+min	code/handmade_math.h	/^    v2 min, max;$/;"	m	struct:__anon23
+mouse_input	code/handmade_platform.h	/^    MouseInput mouse_input;$/;"	m	struct:__anon18
+move_down	code/handmade_platform.h	/^            GameButton move_down;$/;"	m	struct:__anon12::__anon13::__anon14
+move_left	code/handmade_platform.h	/^            GameButton move_left;$/;"	m	struct:__anon12::__anon13::__anon14
+move_right	code/handmade_platform.h	/^            GameButton move_right;$/;"	m	struct:__anon12::__anon13::__anon14
+move_up	code/handmade_platform.h	/^            GameButton move_up;$/;"	m	struct:__anon12::__anon13::__anon14
+n_color_planes	code/handmade.c	/^    u16 n_color_planes;         \/\/ must be 1$/;"	m	struct:__anon2	file:
+n_colors_in_palette	code/handmade.c	/^    u32 n_colors_in_palette;$/;"	m	struct:__anon2	file:
+n_important_colors	code/handmade.c	/^    u32 n_important_colors;$/;"	m	struct:__anon2	file:
+offset_	code/handmade_tile.h	/^    v2 offset_;$/;"	m	struct:__anon48
+one_past_last_slash	code/linux_handmade.h	/^    char *one_past_last_slash;$/;"	m	struct:__anon43
+p	code/handmade.h	/^    TilemapPosition p;$/;"	m	struct:__anon29
+p	code/handmade.h	/^    v2 p;                   \/\/ NOTE(fede): Relative to camera $/;"	m	struct:__anon31
+performance_frequency	code/linux_handmade.c	/^global u64 performance_frequency;$/;"	v
+permanent_storage	code/handmade_platform.h	/^    void *permanent_storage;$/;"	m	struct:__anon19
+permanent_storage_size	code/handmade_platform.h	/^    MemoryIndex permanent_storage_size;$/;"	m	struct:__anon19
+pitch	code/linux_handmade.h	/^    u32 pitch; \/\/ NOTE(fede): In bytes$/;"	m	struct:__anon37
+pixels	code/handmade.h	/^    u32 *pixels;$/;"	m	struct:__anon25
+placeholder	code/handmade_platform.h	/^    int placeholder;$/;"	m	struct:__anon6
+play_cursor	code/linux_handmade.h	/^    int play_cursor;$/;"	m	struct:__anon38
+play_cursor	code/linux_handmade.h	/^    int play_cursor;$/;"	m	struct:__anon42
+playback_fd	code/linux_handmade.h	/^    int playback_fd;$/;"	m	struct:__anon43
+player_index_for_controller	code/handmade.h	/^    u32 player_index_for_controller[HANDMADE_MAX_INPUTS];$/;"	m	struct:__anon33
+playing_index	code/linux_handmade.h	/^    int playing_index; $/;"	m	struct:__anon43
+push_array	code/handmade_arena.c	20;"	d	file:
+push_size	code/handmade_arena.c	/^internal void *push_size(Arena *arena, MemoryIndex size) {$/;"	f
+push_struct	code/handmade_arena.c	19;"	d	file:
+r	code/handmade.c	/^    u32 r, g, b, a;$/;"	m	struct:__anon3	file:
+random_number_table	code/handmade_random.h	/^global u32 random_number_table[] = {$/;"	v
+raw_image_size	code/handmade.c	/^    u32 raw_image_size;$/;"	m	struct:__anon2	file:
+recanonicalize_coord	code/handmade_tile.c	/^internal void recanonicalize_coord($/;"	f
+recording_fd	code/linux_handmade.h	/^    int recording_fd;$/;"	m	struct:__anon43
+recording_index	code/linux_handmade.h	/^    int recording_index; $/;"	m	struct:__anon43
+rect2_center_dim	code/handmade_math.h	/^internal inline Rect2 rect2_center_dim(v2 center, v2 dim) {$/;"	f
+rect2_center_halfdim	code/handmade_math.h	/^internal inline Rect2 rect2_center_halfdim(v2 center, v2 halfdim) {$/;"	f
+rect2_min_dim	code/handmade_math.h	/^internal inline Rect2 rect2_min_dim(v2 min, v2 dim) {$/;"	f
+rect2_min_max	code/handmade_math.h	/^internal inline Rect2 rect2_min_max(v2 min, v2 max) {$/;"	f
+reflect	code/handmade_math.h	/^internal inline v2 reflect(v2 a, v2 normal, f32 bounce) {$/;"	f
+rel_tile_x	code/handmade_tile.h	/^    u32 rel_tile_x;$/;"	m	struct:__anon47
+rel_tile_y	code/handmade_tile.h	/^    u32 rel_tile_y;$/;"	m	struct:__anon47
+renderer	code/linux_handmade.h	/^    SDL_Renderer *renderer;$/;"	m	struct:__anon37
+reserved_1	code/handmade.c	/^    u16 reserved_1;$/;"	m	struct:__anon1	file:
+reserved_2	code/handmade.c	/^    u16 reserved_2;$/;"	m	struct:__anon1	file:
+residence	code/handmade.h	/^    EntityResidence residence;$/;"	m	struct:__anon32
+right	code/handmade_platform.h	/^            GameButton right;$/;"	m	struct:__anon15::__anon16::__anon17
+right_shoulder	code/handmade_platform.h	/^            GameButton right_shoulder;$/;"	m	struct:__anon12::__anon13::__anon14
+round_f32_to_int	code/handmade_intrinsics.h	/^internal inline int round_f32_to_int(f32 a) {$/;"	f
+running	code/x11_pulse_handmade.c	/^global bool running = true;$/;"	v
+running_sample_index	code/linux_handmade.h	/^    int running_sample_index;$/;"	m	struct:__anon39
+safety_bytes	code/linux_handmade.h	/^    int safety_bytes;$/;"	m	struct:__anon39
+sample_count	code/handmade_platform.h	/^    u32 sample_count;$/;"	m	struct:__anon9
+samples	code/handmade_platform.h	/^    i16 *samples;$/;"	m	struct:__anon9
+samples_per_second	code/handmade_platform.h	/^    u32 samples_per_second;$/;"	m	struct:__anon9
+samples_per_second	code/linux_handmade.h	/^    int samples_per_second;$/;"	m	struct:__anon39
+sdl_audio_callback	code/linux_handmade.c	/^internal void sdl_audio_callback(void *userdata, u8 *stream, int len) {$/;"	f
+sdl_debug_draw_cursor	code/linux_handmade.c	/^internal void sdl_debug_draw_cursor(SDLBackbuffer *backbuffer, int cursor,$/;"	f
+sdl_debug_draw_horizontal	code/linux_handmade.c	/^internal void sdl_debug_draw_horizontal(SDLBackbuffer *backbuffer, int y,$/;"	f
+sdl_debug_draw_vertical	code/linux_handmade.c	/^internal void sdl_debug_draw_vertical(SDLBackbuffer *backbuffer, int x, int top,$/;"	f
+sdl_debug_sync_display	code/linux_handmade.c	/^internal void sdl_debug_sync_display(SDLBackbuffer *backbuffer,$/;"	f
+sdl_fill_sound_buffer	code/linux_handmade.c	/^internal void sdl_fill_sound_buffer(SDLAudioRingBuffer *ring_buffer,$/;"	f
+sdl_get_seconds_elapsed	code/linux_handmade.c	/^internal inline f64 sdl_get_seconds_elapsed(u64 start_counter,$/;"	f
+sdl_get_sound_write_marker	code/linux_handmade.c	/^SDLSoundWriteMarker sdl_get_sound_write_marker(SDLSoundOutput *sound_output,$/;"	f
+sdl_handle_button	code/linux_handmade.c	/^internal void sdl_handle_button(GameButton *old_state, bool is_down,$/;"	f
+sdl_handle_event	code/linux_handmade.c	/^internal bool sdl_handle_event(SDL_Event *event, SDLBackbuffer *backbuffer,$/;"	f
+sdl_handle_events	code/linux_handmade.c	/^internal bool sdl_handle_events(SDLBackbuffer *backbuffer,$/;"	f
+sdl_handle_keyboard_key	code/linux_handmade.c	/^internal void sdl_handle_keyboard_key(GameButton *new_state, bool is_down) {$/;"	f
+sdl_init_audio	code/linux_handmade.c	/^internal void sdl_init_audio(SDLSoundOutput *sound_output,$/;"	f
+sdl_normalize_stick	code/linux_handmade.c	/^internal f32 sdl_normalize_stick(i16 stick_pos, i16 deadzone) {$/;"	f
+sdl_remove_controller	code/linux_handmade.c	/^internal void sdl_remove_controller(SDLControllers *controllers,$/;"	f
+sdl_reset_renderer	code/linux_handmade.c	/^internal void sdl_reset_renderer(SDLBackbuffer *buffer) {$/;"	f
+sdl_resize_backbuffer	code/linux_handmade.c	/^internal void sdl_resize_backbuffer(SDLBackbuffer *buffer, i32 width,$/;"	f
+sdl_sleep_to_target	code/linux_handmade.c	/^internal void sdl_sleep_to_target(u64 last_counter, f64 target_seconds) {$/;"	f
+sdl_update_controller_sticks	code/linux_handmade.c	/^internal void sdl_update_controller_sticks(GameControllerInput *old_state,$/;"	f
+secondary_buffer_size	code/linux_handmade.h	/^    int secondary_buffer_size;$/;"	m	struct:__anon39
+set_camera	code/handmade.c	/^internal void set_camera($/;"	f
+set_tile_value	code/handmade_tile.c	/^internal void set_tile_value($/;"	f
+set_tile_value_unchecked	code/handmade_tile.c	/^internal void set_tile_value_unchecked($/;"	f
+sign_int	code/handmade_intrinsics.h	/^internal inline int sign_int(int val) {$/;"	f
+sin_f32	code/handmade_intrinsics.h	/^internal inline f32 sin_f32(f32 angle) {$/;"	f
+size	code/handmade_arena.h	/^    MemoryIndex size;$/;"	m	struct:__anon34
+size	code/handmade_platform.h	/^    u64 size;$/;"	m	struct:__anon7
+size	code/linux_handmade.h	/^    int size;$/;"	m	struct:__anon38
+speed	code/handmade.h	/^    f32 speed;$/;"	m	struct:__anon31
+sqrt_f32	code/handmade_intrinsics.h	/^internal inline f32 sqrt_f32(f32 a) {$/;"	f
+square	code/handmade_math.h	/^internal inline f32 square(f32 a) {$/;"	f
+start	code/handmade_platform.h	/^            GameButton start;$/;"	m	struct:__anon12::__anon13::__anon14
+string_len	code/linux_handmade.c	/^internal int string_len(char *str) {$/;"	f
+subtract_tilemap_positions	code/handmade_tile.c	/^internal TilemapDifference subtract_tilemap_positions($/;"	f
+target_cursor	code/linux_handmade.h	/^    int target_cursor;$/;"	m	struct:__anon42
+terabytes	code/handmade.h	53;"	d
+test_wall	code/handmade.c	/^internal bool test_wall(f32 *t_min,$/;"	f
+texture	code/linux_handmade.h	/^    SDL_Texture *texture;$/;"	m	struct:__anon37
+thumb1	code/handmade_platform.h	/^            GameButton thumb1; \/\/ thumb - back$/;"	m	struct:__anon15::__anon16::__anon17
+thumb2	code/handmade_platform.h	/^            GameButton thumb2; \/\/ thumb - forwards$/;"	m	struct:__anon15::__anon16::__anon17
+tile_side_in_meters	code/handmade_tile.h	/^    f32 tile_side_in_meters;$/;"	m	struct:__anon46
+tile_side_in_pixels	code/handmade.h	/^    f32 tile_side_in_pixels;$/;"	m	struct:__anon33
+tilechunk_count_x	code/handmade_tile.h	/^    u32 tilechunk_count_x;$/;"	m	struct:__anon46
+tilechunk_count_y	code/handmade_tile.h	/^    u32 tilechunk_count_y;$/;"	m	struct:__anon46
+tilechunk_count_z	code/handmade_tile.h	/^    u32 tilechunk_count_z;$/;"	m	struct:__anon46
+tilechunk_x	code/handmade_tile.h	/^    u32 tilechunk_x;$/;"	m	struct:__anon47
+tilechunk_y	code/handmade_tile.h	/^    u32 tilechunk_y;$/;"	m	struct:__anon47
+tilechunk_z	code/handmade_tile.h	/^    u32 tilechunk_z;$/;"	m	struct:__anon47
+tilechunks	code/handmade_tile.h	/^    TileChunk *tilechunks;$/;"	m	struct:__anon46
+tilemap	code/handmade.h	/^    Tilemap *tilemap;$/;"	m	struct:__anon24
+tiles	code/handmade_tile.h	/^    u32 *tiles;$/;"	m	struct:__anon45
+tone_hz	code/handmade_platform.h	/^    int tone_hz;$/;"	m	struct:__anon10
+tone_hz	code/linux_handmade.h	/^    int tone_hz;$/;"	m	struct:__anon39
+tone_volume	code/handmade_platform.h	/^    int tone_volume;$/;"	m	struct:__anon10
+torso	code/handmade.h	/^    LoadedBitmap torso;$/;"	m	struct:__anon26
+transient_storage	code/handmade_platform.h	/^    void *transient_storage;$/;"	m	struct:__anon19
+transient_storage_size	code/handmade_platform.h	/^    MemoryIndex transient_storage_size;$/;"	m	struct:__anon19
+true	code/handmade_platform.h	/^typedef enum { false, true } bool;$/;"	e	enum:__anon5
+truncate_f32_to_int	code/handmade_intrinsics.h	/^internal inline int truncate_f32_to_int(f32 a) {$/;"	f
+type	code/handmade.h	/^    EntityType type;$/;"	m	struct:__anon29
+u16	code/handmade_platform.h	/^typedef uint16_t u16;$/;"	t
+u32	code/handmade_platform.h	/^typedef uint32_t u32;$/;"	t
+u64	code/handmade_platform.h	/^typedef uint64_t u64;$/;"	t
+u8	code/handmade_platform.h	/^typedef uint8_t u8;$/;"	t
+update_and_render	code/linux_handmade.h	/^    GameUpdateAndRender *update_and_render;$/;"	m	struct:__anon36
+update_player	code/handmade.c	/^internal void update_player(GameState *game_state,$/;"	f
+used	code/handmade_arena.h	/^    MemoryIndex used;$/;"	m	struct:__anon34
+v2	code/handmade_math.h	/^} v2; $/;"	t	typeref:struct:__anon20
+v2_add	code/handmade_math.h	/^internal inline v2 v2_add(v2 a, v2 b) {$/;"	f
+v2_dot	code/handmade_math.h	/^internal inline f32 v2_dot(v2 a, v2 b) {$/;"	f
+v2_length2	code/handmade_math.h	/^internal inline f32 v2_length2(v2 v) {$/;"	f
+v2_neg	code/handmade_math.h	/^internal inline v2 v2_neg(v2 a) {$/;"	f
+v2_norm	code/handmade_math.h	/^internal inline v2 v2_norm(v2 v) {$/;"	f
+v2_sdiv	code/handmade_math.h	/^internal inline v2 v2_sdiv(v2 a, f32 m) {$/;"	f
+v2_smul	code/handmade_math.h	/^internal inline v2 v2_smul(v2 a, f32 m) {$/;"	f
+v2_sub	code/handmade_math.h	/^internal inline v2 v2_sub(v2 a, v2 b) {$/;"	f
+v2_vmul	code/handmade_math.h	/^internal inline v2 v2_vmul(v2 a, v2 b) {$/;"	f
+vertical_resolution	code/handmade.c	/^    i32 vertical_resolution;    \/\/ pixel per metre$/;"	m	struct:__anon2	file:
+wave_period	code/handmade_platform.h	/^    int wave_period;$/;"	m	struct:__anon10
+width	code/handmade.h	/^    f32 width;$/;"	m	struct:__anon29
+width	code/handmade.h	/^    i32 width;$/;"	m	struct:__anon25
+width	code/handmade_platform.h	/^    u32 width;$/;"	m	struct:__anon8
+width	code/linux_handmade.h	/^    u32 width;$/;"	m	struct:__anon37
+width	code/x11_pulse_handmade.c	/^    u32 width;$/;"	m	struct:__anon35	file:
+window	code/linux_handmade.h	/^    SDL_Window *window;$/;"	m	struct:__anon37
+wm_delete_window	code/x11_pulse_handmade.c	/^global Atom wm_delete_window;$/;"	v
+world	code/handmade.h	/^    World *world;$/;"	m	struct:__anon33
+world_arena	code/handmade.h	/^    Arena world_arena;$/;"	m	struct:__anon33
+write_cursor	code/linux_handmade.h	/^    int write_cursor;$/;"	m	struct:__anon38
+write_cursor	code/linux_handmade.h	/^    int write_cursor;$/;"	m	struct:__anon42
+x	code/handmade_math.h	/^            f32 x; $/;"	m	struct:__anon20::__anon21::__anon22
+x	code/handmade_platform.h	/^    int x;$/;"	m	struct:__anon15
+x11_create_shm_image	code/x11_pulse_handmade.c	/^internal XImage *x11_create_shm_image(Display *display, XBackbuffer buffer,$/;"	f
+x11_handle_events	code/x11_pulse_handmade.c	/^internal void x11_handle_events(Display *display, XImage **image,$/;"	f
+x11_has_shm_ext	code/x11_pulse_handmade.c	/^internal bool x11_has_shm_ext(Display *display) {$/;"	f
+x11_resize_backbuffer	code/x11_pulse_handmade.c	/^internal void x11_resize_backbuffer(XBackbuffer *buffer, Display *display,$/;"	f
+x_offset	code/x11_pulse_handmade.c	/^global u32 x_offset = 0;$/;"	v
+y	code/handmade_math.h	/^            f32 y;$/;"	m	struct:__anon20::__anon21::__anon22
+y	code/handmade_platform.h	/^    int y;$/;"	m	struct:__anon15
+y_offset	code/x11_pulse_handmade.c	/^global u32 y_offset = 0;$/;"	v
+z	code/handmade_platform.h	/^    int z; \/\/ TODO(fede): Set scroll wheel when updating input$/;"	m	struct:__anon15
